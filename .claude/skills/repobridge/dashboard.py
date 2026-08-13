@@ -5,10 +5,12 @@ Open the generated file directly in a browser.
 
 Accepts two input shapes:
   - a dict with "idea"/"requirements"/"repos" (the SKILL.md sidecar) ->
-    full dashboard: hero card for the best pick, headline stats, and a
-    secondary comparison against the other candidates
+    full dashboard: hero card for the best pick, headline stats, a
+    checklist + runner-up split, and a compare-card grid for every
+    candidate, with the exhaustive evidence table folded into a
+    <details> disclosure so the page stays scannable without hiding data
   - a plain list (raw `scout.py enrich` output, no ranking/coverage data)
-    -> stats-only comparison charts, no hero (nothing to crown as "best")
+    -> compare cards only, no hero (nothing to crown as "best")
 
 `repos` is expected pre-sorted best-first — this script does not re-rank;
 the winner is whichever repo Claude put first in Step 5 of SKILL.md.
@@ -122,7 +124,6 @@ def hero_section(data, stats):
     best = repos[0]
     rationale = data.get("pick_rationale")
     match_pct = stats["match_pct"]
-    _, match_color = coverage_bucket(match_pct)
 
     tiles = "".join([
         stat_tile("Match", f"{match_pct:.0f}%"),
@@ -163,61 +164,67 @@ def winner_checklist(best, requirements):
           <span class="checklist-evidence">{esc(evidence) if evidence else '<em>Not covered</em>'}</span>
         </div>""")
     return f"""
-    <section class="panel">
+    <div class="panel panel-half">
       <h3>What {esc(best['full_name'])} covers</h3>
       {"".join(rows)}
-    </section>"""
+    </div>"""
 
 
-def metric_bar_chart(title, subtitle, repos, key, max_value, color):
+def runner_up_list(repos):
+    others = repos[1:]
+    if not others:
+        return ""
     rows = []
-    for r in repos:
-        value = r.get(key)
-        if value is None:
-            continue
-        frac = 0.0 if max_value == 0 else min(value / max_value, 1.0)
+    for r in others:
+        pct = r.get("coverage_pct")
+        _, color = coverage_bucket(pct) if pct is not None else (None, MUTED)
+        pct_label = f"{pct:.0f}%" if pct is not None else "—"
         rows.append(f"""
-        <div class="bar-row" title="{esc(r['full_name'])}: {esc(value)}">
-          <div class="bar-label">{esc(r['full_name'])}</div>
-          <div class="bar-track">
-            <div class="bar-fill" style="width:{frac * 100:.1f}%; background:{color};"></div>
-          </div>
-          <div class="bar-value">{esc(value)}</div>
+        <div class="runner-row">
+          <a href="{esc(r.get('url', '#'))}" class="runner-name">{esc(r['full_name'])}</a>
+          <span class="pill" style="background:{color};">{pct_label}</span>
         </div>""")
     return f"""
-    <section class="panel">
-      <h3>{esc(title)}</h3>
-      <p class="panel-subtitle">{esc(subtitle)}</p>
-      {"".join(rows) if rows else '<p class="empty">No data for this metric.</p>'}
-    </section>"""
+    <div class="panel panel-half">
+      <h3>Runner-ups</h3>
+      <p class="panel-subtitle">Considered and ranked below the pick.</p>
+      {"".join(rows)}
+    </div>"""
 
 
-def coverage_chart(repos):
-    rows = []
+def mini_metric(label, value):
+    if value is None:
+        return f'<div class="mini-row"><span class="mini-label">{esc(label)}</span><span class="mini-track"></span></div>'
+    frac = max(0.0, min(value / 100, 1.0))
+    return f"""
+        <div class="mini-row">
+          <span class="mini-label">{esc(label)}</span>
+          <span class="mini-track"><span class="mini-fill" style="width:{frac * 100:.0f}%;"></span></span>
+          <span class="mini-value">{value:.0f}</span>
+        </div>"""
+
+
+def compare_cards(repos):
+    cards = []
     for r in repos:
         pct = r.get("coverage_pct")
-        if pct is None:
-            continue
-        label, color = coverage_bucket(pct)
-        rows.append(f"""
-        <div class="bar-row" title="{esc(r['full_name'])}: {pct:.0f}% coverage ({label})">
-          <div class="bar-label">{esc(r['full_name'])}</div>
-          <div class="bar-track">
-            <div class="bar-fill" style="width:{pct:.1f}%; background:{color};"></div>
+        label, color = coverage_bucket(pct) if pct is not None else ("No coverage data", MUTED)
+        cards.append(f"""
+        <div class="compare-card">
+          <div class="compare-head">
+            <a href="{esc(r.get('url', '#'))}">{esc(r['full_name'])}</a>
+            {f'<span class="pill" style="background:{color};" title="{esc(label)}">{pct:.0f}%</span>' if pct is not None else ''}
           </div>
-          <div class="bar-value status-label" style="color:{color};">{pct:.0f}% &middot; {label}</div>
+          <div class="compare-meta">{esc(r.get('stars', '—'))}★ &middot; {esc(r.get('license_spdx') or 'no license')} &middot; {esc((r.get('pushed_at') or '')[:10] or '—')}</div>
+          {mini_metric("Verified", r.get('verified_score'))}
+          {mini_metric("Deploy", r.get('deployability_score'))}
         </div>""")
-    if not rows:
-        return ""
     return f"""
-    <section class="panel">
-      <h3>Idea coverage, all candidates</h3>
-      <p class="panel-subtitle">Present + half-credit Partial, as a share of stated requirements.</p>
-      {"".join(rows)}
-    </section>"""
+    <div class="section-label">All candidates, side by side</div>
+    <div class="compare-grid">{"".join(cards)}</div>"""
 
 
-def requirement_grid(repos, requirements):
+def evidence_table(repos, requirements):
     if not requirements or not any(r.get("requirement_status") for r in repos):
         return ""
     status_style = {
@@ -239,19 +246,15 @@ def requirement_grid(repos, requirements):
             )
         body_rows.append(f"<tr><th>{esc(r['full_name'])}</th>{''.join(cells)}</tr>")
     return f"""
-    <section class="panel">
-      <h3>Full feature-map grid</h3>
-      <p class="panel-subtitle">Hover a cell for the evidence quote behind it.</p>
-      <div class="table-scroll">
-        <table class="grid-table">
-          <thead><tr><th></th>{header_cells}</tr></thead>
-          <tbody>{"".join(body_rows)}</tbody>
-        </table>
-      </div>
-    </section>"""
+    <div class="table-scroll">
+      <table class="grid-table">
+        <thead><tr><th></th>{header_cells}</tr></thead>
+        <tbody>{"".join(body_rows)}</tbody>
+      </table>
+    </div>"""
 
 
-def data_table(repos):
+def full_data_table(repos):
     rows = []
     for r in repos:
         rows.append(f"""
@@ -265,44 +268,45 @@ def data_table(repos):
           <td class="num">{f"{r['coverage_pct']:.0f}%" if r.get('coverage_pct') is not None else '—'}</td>
         </tr>""")
     return f"""
-    <section class="panel">
-      <h3>All candidates</h3>
-      <div class="table-scroll">
-        <table class="data-table">
-          <thead>
-            <tr><th>Repo</th><th class="num">Stars</th><th>License</th><th>Last commit</th>
-                <th class="num">Verified</th><th class="num">Deployability</th><th class="num">Coverage</th></tr>
-          </thead>
-          <tbody>{"".join(rows)}</tbody>
-        </table>
-      </div>
-    </section>"""
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr><th>Repo</th><th class="num">Stars</th><th>License</th><th>Last commit</th>
+              <th class="num">Verified</th><th class="num">Deployability</th><th class="num">Coverage</th></tr>
+        </thead>
+        <tbody>{"".join(rows)}</tbody>
+      </table>
+    </div>"""
+
+
+def evidence_disclosure(repos, requirements):
+    grid = evidence_table(repos, requirements)
+    table = full_data_table(repos)
+    if not grid and not table:
+        return ""
+    return f"""
+    <details class="disclosure">
+      <summary>Full evidence table &amp; raw data — every requirement, every repo</summary>
+      {grid}
+      {table}
+    </details>"""
 
 
 def render_page(data):
     repos = data.get("repos", [])
     idea = data.get("idea")
     requirements = data.get("requirements", [])
-    max_stars = max((r.get("stars", 0) for r in repos), default=0) or 1
     stats = compute_headline_stats(data)
 
     title = f"RepoBridge: {esc(idea)}" if idea else "RepoBridge dashboard"
 
     top_sections = ""
     if stats:
-        top_sections = hero_section(data, stats) + winner_checklist(repos[0], requirements)
-
-    secondary_sections = [
-        metric_bar_chart("Stars", "Linear scale, capped to the highest-starred candidate shown.",
-                          repos, "stars", max_stars, SEQUENTIAL_BLUE),
-        metric_bar_chart("Verified score", "Recency + contributor count + CI presence, 0-100.",
-                          repos, "verified_score", 100, SEQUENTIAL_BLUE),
-        metric_bar_chart("Deployability score", "Docker/compose + .env.example + deploy button, 0-100.",
-                          repos, "deployability_score", 100, SEQUENTIAL_BLUE),
-        coverage_chart(repos),
-        requirement_grid(repos, requirements),
-        data_table(repos),
-    ]
+        top_sections = hero_section(data, stats) + f"""
+    <div class="split">
+      {winner_checklist(repos[0], requirements)}
+      {runner_up_list(repos)}
+    </div>"""
 
     return f"""<!doctype html>
 <html lang="en">
@@ -373,7 +377,7 @@ def render_page(data):
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     line-height: 1.45;
   }}
-  .page {{ max-width: 880px; margin: 0 auto; padding: 40px 20px 72px; }}
+  .page {{ max-width: 980px; margin: 0 auto; padding: 40px 20px 72px; }}
   .masthead {{ display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }}
   .wordmark {{ font-size: 0.85rem; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); text-transform: uppercase; }}
   .meta {{ color: var(--muted); font-size: 0.8rem; }}
@@ -388,7 +392,7 @@ def render_page(data):
     border-top: 2px solid var(--accent);
     border-radius: 16px;
     padding: 28px 28px 22px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }}
   .hero-kicker {{ font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }}
   .hero-name {{ margin: 0 0 10px; font-size: 1.7rem; text-wrap: balance; }}
@@ -401,13 +405,14 @@ def render_page(data):
   .stat-label {{ font-size: 0.76rem; color: var(--text-secondary); margin-top: 2px; }}
   .stat-sublabel {{ font-size: 0.7rem; color: var(--muted); margin-top: 1px; }}
   .methodology {{ font-size: 0.72rem; color: var(--muted); margin: 14px 2px 0; line-height: 1.5; }}
+  .split {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 8px; }}
   .panel {{
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 20px;
-    margin-bottom: 16px;
   }}
+  .panel-half {{ display: flex; flex-direction: column; }}
   .panel h3 {{ margin: 0 0 2px; font-size: 0.95rem; }}
   .panel-subtitle {{ color: var(--muted); font-size: 0.78rem; margin: 0 0 14px; }}
   .checklist-row {{ display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--gridline); }}
@@ -416,19 +421,31 @@ def render_page(data):
     flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; color: #fff;
     display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700;
   }}
-  .checklist-req {{ flex: 0 0 180px; font-size: 0.85rem; font-weight: 600; }}
-  .checklist-evidence {{ flex: 1; font-size: 0.83rem; color: var(--text-secondary); }}
+  .checklist-req {{ flex: 0 0 42%; font-size: 0.83rem; font-weight: 600; }}
+  .checklist-evidence {{ flex: 1; font-size: 0.8rem; color: var(--text-secondary); }}
   .checklist-evidence em {{ color: var(--muted); font-style: normal; }}
-  .section-label {{ font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 32px 2px 12px; }}
-  .bar-row {{ display: flex; align-items: center; gap: 10px; padding: 3px 0; }}
-  .bar-label {{
-    width: 34%; min-width: 120px; font-size: 0.82rem; color: var(--text-secondary);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }}
-  .bar-track {{ flex: 1; height: 18px; background: var(--gridline); border-radius: 4px; overflow: hidden; }}
-  .bar-fill {{ height: 100%; border-radius: 0 4px 4px 0; min-width: 3px; }}
-  .bar-value {{ width: 110px; text-align: right; font-size: 0.8rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }}
-  .status-label {{ font-weight: 600; }}
+  .runner-row {{ display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--gridline); }}
+  .runner-row:last-child {{ border-bottom: none; }}
+  .runner-name {{ color: var(--text-primary); text-decoration: none; font-size: 0.85rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+  .runner-name:hover {{ text-decoration: underline; }}
+  .section-label {{ font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 28px 2px 12px; }}
+  .compare-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }}
+  .compare-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }}
+  .compare-head {{ display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }}
+  .compare-head a {{ font-size: 0.88rem; font-weight: 600; color: var(--text-primary); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+  .compare-head a:hover {{ text-decoration: underline; }}
+  .compare-meta {{ font-size: 0.74rem; color: var(--muted); margin-bottom: 12px; }}
+  .mini-row {{ display: flex; align-items: center; gap: 8px; margin-top: 6px; }}
+  .mini-label {{ width: 52px; flex: 0 0 auto; font-size: 0.7rem; color: var(--text-secondary); }}
+  .mini-track {{ flex: 1; height: 6px; background: var(--gridline); border-radius: 3px; overflow: hidden; }}
+  .mini-fill {{ display: block; height: 100%; background: var(--accent); border-radius: 3px; }}
+  .mini-value {{ width: 24px; text-align: right; font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }}
+  .disclosure {{ margin-top: 24px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }}
+  .disclosure summary {{ cursor: pointer; padding: 14px 20px; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); list-style: none; }}
+  .disclosure summary::-webkit-details-marker {{ display: none; }}
+  .disclosure summary::before {{ content: "▸"; display: inline-block; margin-right: 8px; color: var(--accent); transition: transform 0.15s; }}
+  .disclosure[open] summary::before {{ transform: rotate(90deg); }}
+  .disclosure > .table-scroll {{ padding: 0 20px 20px; }}
   .empty {{ color: var(--muted); font-size: 0.85rem; }}
   .table-scroll {{ overflow-x: auto; }}
   table {{ border-collapse: collapse; width: 100%; font-size: 0.8rem; }}
@@ -439,9 +456,9 @@ def render_page(data):
   .pill {{ display: inline-block; padding: 2px 8px; border-radius: 999px; color: #fff; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }}
   .grid-table th {{ white-space: normal; }}
   footer {{ margin-top: 32px; color: var(--muted); font-size: 0.75rem; text-align: center; }}
-  @media (max-width: 620px) {{
+  @media (max-width: 720px) {{
+    .split {{ grid-template-columns: 1fr; }}
     .stat-grid {{ grid-template-columns: repeat(2, 1fr); }}
-    .checklist-row {{ flex-direction: column; gap: 2px; }}
     .checklist-req {{ flex: none; }}
   }}
 </style>
@@ -454,8 +471,8 @@ def render_page(data):
     </div>
     {f'<div class="query-pill">{esc(idea)}</div>' if idea else ''}
     {top_sections}
-    <div class="section-label">Compared against</div>
-    {"".join(secondary_sections)}
+    {compare_cards(repos)}
+    {evidence_disclosure(repos, requirements)}
     <footer>Generated by RepoBridge from real GitHub data — see the matching .md report for full source citations.</footer>
   </div>
 </body>
