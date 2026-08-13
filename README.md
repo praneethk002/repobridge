@@ -4,6 +4,15 @@
 
 RepoBridge takes a plain-language app idea, searches real GitHub repositories for ones that already solve most of it, and produces an evidence-backed report of what's covered, what's partial, and what's genuinely missing — the actual 15% worth building. It never writes application code itself; it tells you what to build on top of, and what not to bother reinventing.
 
+<p align="center">
+  <img src="docs/images/dashboard-hero.jpg" alt="RepoBridge dashboard hero card showing a no-strong-match result with match %, features left, time remaining, and tokens saved" width="720">
+</p>
+<p align="center">
+  <img src="docs/images/dashboard-detail.jpg" alt="RepoBridge dashboard detail view: what the pick covers, runner-ups, and the full side-by-side candidate comparison" width="720">
+</p>
+
+*From a real run — see [`local-markdown-notes-ai-20260813.md`](repobridge-reports/local-markdown-notes-ai-20260813.md) for the full report behind this dashboard.*
+
 ## Why
 
 Generating code is now nearly free, so it's tempting to generate everything. That produces token-inflated, fragile, redundant software that traditional engineering avoided by default: look for an existing library first, then build the delta. RepoBridge restores that habit as a workflow instead of a discipline you have to remember to apply. It does the two things a human would do manually — search for prior art, then honestly assess how well it fits — and does them with an auditable, rule-based scoring layer instead of vibes.
