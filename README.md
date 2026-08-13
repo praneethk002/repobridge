@@ -13,25 +13,29 @@ Generating code is now nearly free, so it's tempting to generate everything. Tha
 ```mermaid
 flowchart TD
     Z["/repobridge &lt;idea&gt;"] --> Z2["Step 0: Claude reflects the idea back,\nconfirms understanding — zero GitHub calls before this clears"]
-    Z2 --> A["Claude decomposes the idea:<br/>search queries, topics, requirements list"]
-    A --> C["scout.py search<br/>(metadata only, no README fetches)"]
+    Z2 --> A["Claude decomposes the idea:<br/>whole-project queries + requirements +<br/>up to 3 technical_components (prepared, not yet searched)"]
+    A --> C["Tier 1: scout.py search<br/>(whole project, metadata only)"]
     C --> D["Hard filters: license, staleness<br/>+ rule-based relevance score"]
     D --> E["Top 5-8 candidates"]
     E --> F["scout.py enrich<br/>(README + repo structure, this shortlist only)"]
     F --> G["Claude scores relevance as a<br/>strict evaluator, ranks best-first"]
     G --> H["JSON sidecar (no pick_rationale yet)"]
-    H --> M["dashboard.py --print-stats<br/>decides the pick mode: single / composition / custom_build"]
-    M --> H2["pick_rationale written to match the mode"]
+    H --> M["dashboard.py --print-stats<br/>decides the pick mode"]
+    M -->|single or composition| H2["pick_rationale written to match the mode"]
+    M -->|custom_build| T2["Tier 2: search + enrich + score<br/>the technical_components specifically"]
+    T2 --> T3["Merge with Tier 1, re-rank,<br/>re-run --print-stats — final mode"]
+    T3 --> H2
     H2 --> I["Markdown report"]
     H2 --> K["dashboard.py<br/>static HTML dashboard"]
 ```
 
-Retrieval and scoring are deliberately split into two stages so the expensive work (fetching README text, checking for CI/Docker/deploy config) only ever runs against a handful of pre-filtered candidates, not every repo that shows up in a search. See [`docs/plan.md`](docs/plan.md) for the full design rationale, including specific tradeoffs made on purpose:
+Retrieval and scoring are deliberately split into stages so the expensive work (fetching README text, checking for CI/Docker/deploy config) only ever runs against a handful of pre-filtered candidates, not every repo that shows up in a search. See [`docs/plan.md`](docs/plan.md) for the full design rationale, including specific tradeoffs made on purpose:
 
 - **Copyleft licenses (GPL/AGPL) are hard-blocked by default.** A builder using this without a lawyer in the loop shouldn't be able to silently walk into a copyleft obligation on a closed-source project. Override with `--allow-copyleft` if you know what you're doing.
 - **The staleness cutoff is 12 months, not 6.** A stable, feature-complete repo can go months without a commit without being abandoned — a tighter cutoff would systematically exclude exactly the kind of "boring, finished" code this tool should prefer. Recency instead weights the *ranking*, not a hard gate.
 - **Step 0 is a real gate, not a formality.** Going straight from a one-line idea to search queries risks locking in a guessed interpretation before anyone can correct it. It's adaptive, not a forced wizard — a clear idea gets a one-turn reflect-and-confirm, not a multi-round interrogation.
 - **The pick mode is a fixed threshold, not an LLM judgment call.** See "The pick" below.
+- **Tier 2 (component search) only fires on `custom_build`, not every run.** Whole-project searches for something like "React Native habit tracker" tend to surface generic high-star infrastructure (the RN framework itself, UI kits) rather than actual matches — a real failure mode, not hypothetical (see the worked example below). When that happens, searching for the idea's discrete technical primitives specifically (e.g. "React Native full-screen alarm" instead of "habit app") finds better candidates than hoping they surface as a side effect of a whole-app query. It's an escalation, run once, not a default second pass — if Tier 1 already found a strong single repo or a strong composition, spending more search calls chasing a marginally better answer isn't worth it.
 
 ## Quickstart
 
@@ -101,6 +105,8 @@ Whichever mode applies, the hero also shows four headline numbers:
 The last two are explicitly estimates, not measurements — the fixed formula behind them (and its constants) lives in `dashboard.py`, and the page always shows the methodology note beside the numbers rather than presenting them as precise. `dashboard.py --print-stats` prints the same numbers (mode included) as JSON so the markdown report states the identical figures instead of Claude re-deriving them by hand.
 
 Below the hero, every artifact still shows the full comparison — stars, license, verified/deployability scores, and a Present/Partial/Missing grid for every candidate considered, each cell backed by a one-line evidence quote from the README. The single-answer framing up top never comes at the cost of the audit trail underneath it, and it never depends on which mode won.
+
+Each candidate also carries a `found_via` label — `"whole-project search"` or `"component search: <name>"` — shown on its compare-card and disclosed in the report. When a composition mixes pieces from both, the report says explicitly which repo came from which search, not just that they were combined.
 
 A worked example, from a real (unmocked) run against the idea *"habit tracker with streaks and social accountability"*, is checked into `repobridge-reports/`. Its headline finding — none of the four real candidates found had any social-accountability feature — is exactly the kind of honest gap this tool exists to surface; it's not a cherry-picked success case.
 

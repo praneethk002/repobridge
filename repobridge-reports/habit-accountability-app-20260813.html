@@ -133,6 +133,7 @@
   .compare-head a { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .compare-head a:hover { text-decoration: underline; }
   .compare-meta { font-size: 0.74rem; color: var(--muted); margin-bottom: 12px; }
+  .compare-found-via { font-size: 0.7rem; color: var(--accent); margin: -8px 0 10px; }
   .mini-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
   .mini-label { width: 52px; flex: 0 0 auto; font-size: 0.7rem; color: var(--text-secondary); }
   .mini-track { flex: 1; height: 6px; background: var(--gridline); border-radius: 3px; overflow: hidden; }
@@ -165,14 +166,14 @@
   <div class="page">
     <div class="masthead">
       <span class="wordmark">RepoBridge</span>
-      <span class="meta">3 candidates &middot; 2026-08-13T00:00:00Z &middot; no network calls at render time</span>
+      <span class="meta">4 candidates &middot; 2026-08-13T00:00:00Z &middot; no network calls at render time</span>
     </div>
     <div class="query-pill">habit accountability app: conversational goal scheduling, full-screen alarm-style reminders, and AI-driven night/morning routines</div>
     
     <section class="hero">
       <div class="hero-kicker">No strong match</div>
       <h2 class="hero-name">Closest reference: <a href="https://github.com/Pratham754/ZenSlice-Release">Pratham754/ZenSlice-Release</a></h2>
-      <p class="hero-rationale">Nothing found is close. The best individual match, ZenSlice, is a Windows desktop screen-time tracker — a different platform entirely from the React Native mobile app this idea needs — and it only covers the periodic check-in requirement. Bundel and neuropathAI each cover at most a sliver, and are Android-notification and Firefox-extension projects respectively, neither reusable as a mobile codebase. The core of this idea — conversational AI onboarding that builds a schedule, alarm-grade full-screen interrupts, and scheduled night/morning routine calls — doesn&#x27;t have an existing open-source analog. Expect to build most of this from scratch, likely composing narrow single-purpose libraries (a full-screen-alarm package, a background scheduler, an LLM chat SDK) rather than forking any one app.</p>
+      <p class="hero-rationale">Still no strong match after a targeted second search. Tier 1 (whole-project search) found ZenSlice, bundel, and neuropathAI, none close and all wrong-platform. Tier 2 searched specifically for the idea&#x27;s three technical primitives — full-screen alarm, background scheduler, conversational AI chat — and found exactly one new, more relevant reference: dnschat, a real React Native/Expo app with a working LLM chat interface (its DNS-over-TXT transport is a novelty, irrelevant here, but the chat-UI + LLM-integration pattern is a legitimate reference for the conversational-onboarding piece). Nothing surfaced for full-screen alarm or background scheduling specifically — those remain genuinely unaddressed by anything findable on GitHub. Joint coverage across the top 3 candidates is 33.3%, still well short of the 70% bar, so this stays a custom-build call: use dnschat as a conceptual reference for the chat layer, and expect the alarm/scheduling core to be built from platform primitives (Android full-screen intents, iOS time-sensitive notifications) rather than any existing library found here.</p>
       <div class="stat-grid">
         <div class="stat-tile">
           <div class="stat-value">17%</div>
@@ -243,6 +244,10 @@
           <span class="pill" style="background:#d03b3b;">8%</span>
         </div>
         <div class="runner-row">
+          <a href="https://github.com/mneves75/dnschat" class="runner-name">mneves75/dnschat</a>
+          <span class="pill" style="background:#d03b3b;">8%</span>
+        </div>
+        <div class="runner-row">
           <a href="https://github.com/Modaniels/neuropathAI" class="runner-name">Modaniels/neuropathAI</a>
           <span class="pill" style="background:#d03b3b;">8%</span>
         </div>
@@ -257,6 +262,7 @@
             <span class="pill" style="background:#d03b3b;" title="Weak fit">17%</span>
           </div>
           <div class="compare-meta">11★ &middot; Apache-2.0 &middot; 2026-07-16</div>
+          <div class="compare-found-via">whole-project search</div>
           
         <div class="mini-row">
           <span class="mini-label">Verified</span>
@@ -276,6 +282,7 @@
             <span class="pill" style="background:#d03b3b;" title="Weak fit">8%</span>
           </div>
           <div class="compare-meta">294★ &middot; Apache-2.0 &middot; 2026-08-13</div>
+          <div class="compare-found-via">whole-project search</div>
           
         <div class="mini-row">
           <span class="mini-label">Verified</span>
@@ -291,10 +298,31 @@
         </div>
         <div class="compare-card">
           <div class="compare-head">
+            <a href="https://github.com/mneves75/dnschat">mneves75/dnschat</a>
+            <span class="pill" style="background:#d03b3b;" title="Weak fit">8%</span>
+          </div>
+          <div class="compare-meta">74★ &middot; MIT &middot; 2026-08-09</div>
+          <div class="compare-found-via">component search: conversational AI chat</div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Verified</span>
+          <span class="mini-track"><span class="mini-fill" style="width:67%;"></span></span>
+          <span class="mini-value">67</span>
+        </div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Deploy</span>
+          <span class="mini-track"><span class="mini-fill" style="width:0%;"></span></span>
+          <span class="mini-value">0</span>
+        </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-head">
             <a href="https://github.com/Modaniels/neuropathAI">Modaniels/neuropathAI</a>
             <span class="pill" style="background:#d03b3b;" title="Weak fit">8%</span>
           </div>
           <div class="compare-meta">11★ &middot; MIT &middot; 2026-01-17</div>
+          <div class="compare-found-via">whole-project search</div>
           
         <div class="mini-row">
           <span class="mini-label">Verified</span>
@@ -315,7 +343,7 @@
     <div class="table-scroll">
       <table class="grid-table">
         <thead><tr><th></th><th>conversational onboarding and goal scheduling</th><th>full-screen alarm-style reminders</th><th>reliable background scheduling</th><th>night wind-down routine</th><th>morning wake and planning routine</th><th>periodic screen-time check-ins</th></tr></thead>
-        <tbody><tr><th>Pratham754/ZenSlice-Release</th><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Only a Windows toast notification at limit thresholds, not full-screen">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Runs in system tray tracking usage, but doesn&#x27;t schedule reminders/events">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#0ca30c;" title="&quot;Set a daily cap... Get a Windows notification 5 minutes before the limit and again when you hit it&quot;">✓ Present</span></td></tr><tr><th>code-with-the-italians/bundel</th><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Batches and releases notifications at set times, not full-screen/unmissable">– Missing</span></td><td><span class="pill" style="background:#fab219;" title="&quot;groups up notifications and only releases them in batches, at set times&quot; — timed release logic, but for notification batching, not alarm-grade scheduling">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Reduces notification interruptions rather than checking in on usage">– Missing</span></td></tr><tr><th>Modaniels/neuropathAI</th><td><span class="pill" style="background:#fab219;" title="&quot;Personalized coaching after each session&quot; via Gemini AI — post-session AI insight, not an upfront onboarding conversation that builds a schedule">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="A draggable floating widget, not a full-screen takeover">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="User-initiated start/stop sessions, not automatic periodic check-ins">– Missing</span></td></tr></tbody>
+        <tbody><tr><th>Pratham754/ZenSlice-Release</th><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Only a Windows toast notification at limit thresholds, not full-screen">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Runs in system tray tracking usage, but doesn&#x27;t schedule reminders/events">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#0ca30c;" title="&quot;Set a daily cap... Get a Windows notification 5 minutes before the limit and again when you hit it&quot;">✓ Present</span></td></tr><tr><th>code-with-the-italians/bundel</th><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Batches and releases notifications at set times, not full-screen/unmissable">– Missing</span></td><td><span class="pill" style="background:#fab219;" title="&quot;groups up notifications and only releases them in batches, at set times&quot; — timed release logic, but for notification batching, not alarm-grade scheduling">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Reduces notification interruptions rather than checking in on usage">– Missing</span></td></tr><tr><th>mneves75/dnschat</th><td><span class="pill" style="background:#fab219;" title="&quot;provides a modern, ChatGPT-like chat interface... to communicate with an LLM&quot; — a working React Native/Expo chat UI + LLM integration, but a generic chat log, not a scheduling-building onboarding flow, and the DNS-over-TXT transport is a novelty irrelevant to this idea">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td></tr><tr><th>Modaniels/neuropathAI</th><td><span class="pill" style="background:#fab219;" title="&quot;Personalized coaching after each session&quot; via Gemini AI — post-session AI insight, not an upfront onboarding conversation that builds a schedule">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="A draggable floating widget, not a full-screen takeover">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="User-initiated start/stop sessions, not automatic periodic check-ins">– Missing</span></td></tr></tbody>
       </table>
     </div>
       
@@ -341,6 +369,15 @@
           <td>Apache-2.0</td>
           <td>2026-08-13</td>
           <td class="num">100.0</td>
+          <td class="num">0.0</td>
+          <td class="num">8%</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/mneves75/dnschat">mneves75/dnschat</a></td>
+          <td class="num">74</td>
+          <td>MIT</td>
+          <td>2026-08-09</td>
+          <td class="num">66.7</td>
           <td class="num">0.0</td>
           <td class="num">8%</td>
         </tr>

@@ -2,7 +2,7 @@
   "idea": "habit accountability app: conversational goal scheduling, full-screen alarm-style reminders, and AI-driven night/morning routines",
   "requirements": ["conversational onboarding and goal scheduling", "full-screen alarm-style reminders", "reliable background scheduling", "night wind-down routine", "morning wake and planning routine", "periodic screen-time check-ins"],
   "generated_at": "2026-08-13T00:00:00Z",
-  "pick_rationale": "Nothing found is close. The best individual match, ZenSlice, is a Windows desktop screen-time tracker — a different platform entirely from the React Native mobile app this idea needs — and it only covers the periodic check-in requirement. Bundel and neuropathAI each cover at most a sliver, and are Android-notification and Firefox-extension projects respectively, neither reusable as a mobile codebase. The core of this idea — conversational AI onboarding that builds a schedule, alarm-grade full-screen interrupts, and scheduled night/morning routine calls — doesn't have an existing open-source analog. Expect to build most of this from scratch, likely composing narrow single-purpose libraries (a full-screen-alarm package, a background scheduler, an LLM chat SDK) rather than forking any one app.",
+  "pick_rationale": "Still no strong match after a targeted second search. Tier 1 (whole-project search) found ZenSlice, bundel, and neuropathAI, none close and all wrong-platform. Tier 2 searched specifically for the idea's three technical primitives — full-screen alarm, background scheduler, conversational AI chat — and found exactly one new, more relevant reference: dnschat, a real React Native/Expo app with a working LLM chat interface (its DNS-over-TXT transport is a novelty, irrelevant here, but the chat-UI + LLM-integration pattern is a legitimate reference for the conversational-onboarding piece). Nothing surfaced for full-screen alarm or background scheduling specifically — those remain genuinely unaddressed by anything findable on GitHub. Joint coverage across the top 3 candidates is 33.3%, still well short of the 70% bar, so this stays a custom-build call: use dnschat as a conceptual reference for the chat layer, and expect the alarm/scheduling core to be built from platform primitives (Android full-screen intents, iOS time-sensitive notifications) rather than any existing library found here.",
   "repos": [
     {
       "full_name": "Pratham754/ZenSlice-Release",
@@ -13,6 +13,7 @@
       "verified_score": 33.3,
       "deployability_score": 0.0,
       "coverage_pct": 16.7,
+      "found_via": "whole-project search",
       "requirement_status": {
         "conversational onboarding and goal scheduling": {"status": "missing", "evidence": ""},
         "full-screen alarm-style reminders": {"status": "missing", "evidence": "Only a Windows toast notification at limit thresholds, not full-screen"},
@@ -31,6 +32,7 @@
       "verified_score": 100.0,
       "deployability_score": 0.0,
       "coverage_pct": 8.3,
+      "found_via": "whole-project search",
       "requirement_status": {
         "conversational onboarding and goal scheduling": {"status": "missing", "evidence": ""},
         "full-screen alarm-style reminders": {"status": "missing", "evidence": "Batches and releases notifications at set times, not full-screen/unmissable"},
@@ -38,6 +40,25 @@
         "night wind-down routine": {"status": "missing", "evidence": ""},
         "morning wake and planning routine": {"status": "missing", "evidence": ""},
         "periodic screen-time check-ins": {"status": "missing", "evidence": "Reduces notification interruptions rather than checking in on usage"}
+      }
+    },
+    {
+      "full_name": "mneves75/dnschat",
+      "url": "https://github.com/mneves75/dnschat",
+      "stars": 74,
+      "license_spdx": "MIT",
+      "pushed_at": "2026-08-09T05:03:56Z",
+      "verified_score": 66.7,
+      "deployability_score": 0.0,
+      "coverage_pct": 8.3,
+      "found_via": "component search: conversational AI chat",
+      "requirement_status": {
+        "conversational onboarding and goal scheduling": {"status": "partial", "evidence": "\"provides a modern, ChatGPT-like chat interface... to communicate with an LLM\" — a working React Native/Expo chat UI + LLM integration, but a generic chat log, not a scheduling-building onboarding flow, and the DNS-over-TXT transport is a novelty irrelevant to this idea"},
+        "full-screen alarm-style reminders": {"status": "missing", "evidence": ""},
+        "reliable background scheduling": {"status": "missing", "evidence": ""},
+        "night wind-down routine": {"status": "missing", "evidence": ""},
+        "morning wake and planning routine": {"status": "missing", "evidence": ""},
+        "periodic screen-time check-ins": {"status": "missing", "evidence": ""}
       }
     },
     {
@@ -49,6 +70,7 @@
       "verified_score": 33.3,
       "deployability_score": 0.0,
       "coverage_pct": 8.3,
+      "found_via": "whole-project search",
       "requirement_status": {
         "conversational onboarding and goal scheduling": {"status": "partial", "evidence": "\"Personalized coaching after each session\" via Gemini AI — post-session AI insight, not an upfront onboarding conversation that builds a schedule"},
         "full-screen alarm-style reminders": {"status": "missing", "evidence": "A draggable floating widget, not a full-screen takeover"},

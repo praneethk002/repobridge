@@ -2,7 +2,7 @@
 
 ## No strong match — closest reference: Pratham754/ZenSlice-Release
 
-Nothing found is close. The best individual match, ZenSlice, is a Windows desktop screen-time tracker — a different platform entirely from the React Native mobile app this idea needs — and it only covers the periodic check-in requirement. Bundel and neuropathAI each cover at most a sliver, and are Android-notification and Firefox-extension projects respectively, neither reusable as a mobile codebase. The core of this idea — conversational AI onboarding that builds a schedule, alarm-grade full-screen interrupts, and scheduled night/morning routine calls — doesn't have an existing open-source analog. Expect to build most of this from scratch, likely composing narrow single-purpose libraries (a full-screen-alarm package, a background scheduler, an LLM chat SDK) rather than forking any one app.
+Still no strong match after a targeted second search. Tier 1 (whole-project search) found ZenSlice, bundel, and neuropathAI, none close and all wrong-platform. Tier 2 searched specifically for the idea's three technical primitives — full-screen alarm, background scheduler, conversational AI chat — and found exactly one new, more relevant reference: dnschat, a real React Native/Expo app with a working LLM chat interface (its DNS-over-TXT transport is a novelty, irrelevant here, but the chat-UI + LLM-integration pattern is a legitimate reference for the conversational-onboarding piece). Nothing surfaced for full-screen alarm or background scheduling specifically — those remain genuinely unaddressed by anything findable on GitHub. Joint coverage across the top 3 candidates is 33.3%, still well short of the 70% bar, so this stays a custom-build call: use dnschat as a conceptual reference for the chat layer, and expect the alarm/scheduling core to be built from platform primitives (Android full-screen intents, iOS time-sensitive notifications) rather than any existing library found here.
 
 | Match | Features left | Est. time remaining | Tokens saved |
 |---|---|---|---|
@@ -16,13 +16,31 @@ Nothing found is close. The best individual match, ZenSlice, is a Windows deskto
 
 Idea requirements evaluated: conversational onboarding and goal scheduling, full-screen alarm-style reminders, reliable background scheduling, night wind-down routine, morning wake and planning routine, periodic screen-time check-ins.
 
-3 candidates survived search + hard filters (license present and non-copyleft, pushed within 12 months, stars ≥ 10 after two broadening retries — the initial React Native-focused queries returned only generic UI/infra libraries dominated by star count, not actual habit/wellness apps, and a min-stars-30 domain-targeted retry returned zero results before this final pass). All 3 are shown below.
+## Tier 1 — whole-project search
 
-**Platform caveat that applies to every candidate here:** none is React Native. ZenSlice is an Electron desktop app (Windows), Bundel is native Android/Kotlin, neuropathAI is a Firefox browser extension. Even where a requirement is marked Present or Partial below, the underlying code isn't directly portable into a React Native codebase — treat these as conceptual references (how did they solve this problem), not forkable starting points.
+3 candidates survived search + hard filters (license present and non-copyleft, pushed within 12 months, stars ≥ 10 after two broadening retries — the initial React Native-focused queries returned only generic UI/infra libraries dominated by star count, not actual habit/wellness apps, and a min-stars-30 domain-targeted retry returned zero results before this final pass).
+
+Coverage topped out at 16.7% (ZenSlice) — below the 70% strong-fit bar, so this triggered Tier 2.
+
+## Tier 2 — component search (triggered by Tier 1 landing in custom_build)
+
+Rather than stop at "nothing found," searched specifically for the idea's 3 technical primitives instead of the whole-app framing:
+
+- **Full-screen alarm** (React Native full-screen alarm / lock-screen takeover, critical alert full-screen intent) — **0 new candidates.** This capability appears to be genuinely rare or unindexed under these terms on GitHub.
+- **Background scheduler** (React Native reliable background task scheduler, background fetch exact alarm) — **0 new candidates.**
+- **Conversational AI chat** (React Native AI chatbot SDK, LLM chat interface) — **1 new candidate: dnschat.**
+
+Search floor had to drop to min-stars 5 (from 30) before even that one candidate survived — this is a genuinely under-served niche, not a search-phrasing problem alone.
+
+4 candidates total after merging Tier 1 + Tier 2, re-ranked by coverage. All 4 are shown below.
+
+**Platform caveat that applies to every candidate here:** only dnschat is React Native. ZenSlice is an Electron desktop app (Windows), Bundel is native Android/Kotlin, neuropathAI is a Firefox browser extension. Even where a requirement is marked Present or Partial below, most of this code isn't directly portable into a React Native codebase — treat non-RN candidates as conceptual references (how did they solve this problem), not forkable starting points.
 
 ---
 
 ## 1. Pratham754/ZenSlice-Release — closest reference (16.7% coverage)
+
+*Found via: whole-project search*
 
 - **URL:** https://github.com/Pratham754/ZenSlice-Release
 - **Stars:** 11 · **Last commit:** 2026-07-16 · **License:** Apache-2.0
@@ -44,6 +62,8 @@ Idea requirements evaluated: conversational onboarding and goal scheduling, full
 
 ## 2. code-with-the-italians/bundel (8.3% coverage)
 
+*Found via: whole-project search*
+
 - **URL:** https://github.com/code-with-the-italians/bundel
 - **Stars:** 294 · **Last commit:** 2026-08-13 · **License:** Apache-2.0
 - **Verified (100/100):** active in the last 12mo, 3+ contributors, has CI.
@@ -58,13 +78,39 @@ Idea requirements evaluated: conversational onboarding and goal scheduling, full
 | Morning wake and planning routine | Missing | No mention |
 | Periodic screen-time check-ins | Missing | Reduces notification interruptions rather than checking in on usage |
 
-**Note:** highest star count (294) and best-maintained of the three (CI, 3+ contributors) — but that maturity is on a feature (notification batching) that's only tangentially related to this idea. Worth a look at its Android background-scheduling implementation as a technical reference even though the product concept doesn't match.
+**Note:** highest star count (294) and best-maintained of the four (CI, 3+ contributors) — but that maturity is on a feature (notification batching) that's only tangentially related to this idea. Worth a look at its Android background-scheduling implementation as a technical reference even though the product concept doesn't match.
 
 **Missing slice to build:** essentially everything specific to this idea.
 
 ---
 
-## 3. Modaniels/neuropathAI (8.3% coverage)
+## 3. mneves75/dnschat (8.3% coverage)
+
+*Found via: component search — conversational AI chat*
+
+- **URL:** https://github.com/mneves75/dnschat
+- **Stars:** 74 · **Last commit:** 2026-08-09 · **License:** MIT
+- **Verified (66.7/100):** active in the last 12mo, has CI. Not verified: fewer than 3 contributors.
+- **Deployability (0/100):** no Dockerfile/compose, no `.env.example`, no deploy button.
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| Conversational onboarding and goal scheduling | Partial | "provides a modern, ChatGPT-like chat interface... to communicate with an LLM" — a real React Native/Expo chat UI + LLM integration, but a generic chat log, not a scheduling-building onboarding flow |
+| Full-screen alarm-style reminders | Missing | No mention |
+| Reliable background scheduling | Missing | No mention |
+| Night wind-down routine | Missing | No mention |
+| Morning wake and planning routine | Missing | No mention |
+| Periodic screen-time check-ins | Missing | No mention |
+
+**Note:** the only candidate actually written in React Native/Expo. Its DNS-over-TXT transport (sending chat prompts as DNS queries to avoid API keys) is a novelty specific to its own concept and irrelevant here — any real build would use a normal HTTP LLM API instead. What's genuinely reusable is the chat-UI shell and message-history pattern in an RN/Expo app, which this run's Tier 1 search (framed around "habit tracker" and "wellness") would never have surfaced — it only turned up by searching for the conversational-chat component specifically.
+
+**Missing slice to build:** everything except the chat-UI shell pattern.
+
+---
+
+## 4. Modaniels/neuropathAI (8.3% coverage)
+
+*Found via: whole-project search*
 
 - **URL:** https://github.com/Modaniels/neuropathAI
 - **Stars:** 11 · **Last commit:** 2026-01-17 · **License:** MIT
@@ -80,7 +126,7 @@ Idea requirements evaluated: conversational onboarding and goal scheduling, full
 | Morning wake and planning routine | Missing | No mention |
 | Periodic screen-time check-ins | Missing | User-initiated start/stop sessions, not automatic periodic check-ins |
 
-**Note:** the one genuinely relevant idea here is architectural, not code — it calls Gemini after a tracked session to generate personalized coaching text. That "send session data to an LLM, get coaching back" pattern is worth referencing conceptually for the conversational scheduling feature, even though the extension itself (Firefox, browser-usage tracking) has nothing else in common with a mobile alarm/routine app.
+**Note:** the "send session data to an LLM, get coaching back" pattern is worth referencing conceptually, but dnschat (above) is the stronger reference for the conversational piece specifically, since it's actually React Native rather than a Firefox extension.
 
 **Missing slice to build:** everything except the general "call an LLM for personalized coaching" pattern.
 
@@ -88,11 +134,9 @@ Idea requirements evaluated: conversational onboarding and goal scheduling, full
 
 ## Bottom line
 
-This is genuinely novel territory — no existing open-source project combines conversational AI scheduling, alarm-grade full-screen interrupts, and AI-driven night/morning routine calls into one app. The realistic build path isn't "fork X," it's composing a few narrow, single-purpose pieces:
+This is genuinely novel territory, confirmed by two search passes rather than assumed after one: no existing open-source project combines conversational AI scheduling, alarm-grade full-screen interrupts, and AI-driven night/morning routine calls into one app, and a dedicated second search for the idea's hardest technical pieces still didn't find a full-screen-alarm or background-scheduler library. The realistic build path is composing narrow, single-purpose pieces:
 
-- A **full-screen alarm/lock-screen package** for React Native (Android full-screen intents + iOS time-sensitive notifications) — this is the single hardest technical piece and the one most worth a dedicated search on its own, separate from "habit tracker" framing.
-- A **background task scheduler** reliable enough to fire the night/morning calls even when the app is closed.
-- An **LLM chat integration** for the conversational onboarding and nightly/morning check-ins (neuropathAI's "session data → LLM → coaching text" pattern is a reasonable conceptual starting point).
+- A **full-screen alarm/lock-screen package** for React Native (Android full-screen intents + iOS time-sensitive notifications) — still the single hardest piece, and the Tier 2 search confirms it's not something a GitHub keyword search surfaces easily. Worth checking native Android/iOS ecosystems directly (not RN-wrapped) for prior art, or accepting this is closer to greenfield.
+- A **background task scheduler** reliable enough to fire the night/morning calls even when the app is closed — same story, nothing found.
+- An **LLM chat integration** for the conversational onboarding — dnschat's chat-UI shell (ignore its DNS transport) and neuropathAI's "session → LLM → coaching" pattern are both legitimate conceptual starting points here.
 - Your own scheduling/calendar logic and screen-time-check-in timer — genuinely custom, nothing here comes close.
-
-Worth a follow-up RepoBridge run scoped narrowly to just "React Native full-screen alarm" or "React Native local notifications critical alert" — that's the piece most likely to have a real, forkable open-source match, separate from the "whole app" framing this run used.

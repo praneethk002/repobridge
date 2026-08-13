@@ -329,6 +329,7 @@ def compare_cards(repos):
             {f'<span class="pill" style="background:{color};" title="{esc(label)}">{pct:.0f}%</span>' if pct is not None else ''}
           </div>
           <div class="compare-meta">{esc(r.get('stars', '—'))}★ &middot; {esc(r.get('license_spdx') or 'no license')} &middot; {esc((r.get('pushed_at') or '')[:10] or '—')}</div>
+          {f'<div class="compare-found-via">{esc(r["found_via"])}</div>' if r.get('found_via') else ''}
           {mini_metric("Verified", r.get('verified_score'))}
           {mini_metric("Deploy", r.get('deployability_score'))}
         </div>""")
@@ -562,6 +563,7 @@ def render_page(data):
   .compare-head a {{ font-size: 0.88rem; font-weight: 600; color: var(--text-primary); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
   .compare-head a:hover {{ text-decoration: underline; }}
   .compare-meta {{ font-size: 0.74rem; color: var(--muted); margin-bottom: 12px; }}
+  .compare-found-via {{ font-size: 0.7rem; color: var(--accent); margin: -8px 0 10px; }}
   .mini-row {{ display: flex; align-items: center; gap: 8px; margin-top: 6px; }}
   .mini-label {{ width: 52px; flex: 0 0 auto; font-size: 0.7rem; color: var(--text-secondary); }}
   .mini-track {{ flex: 1; height: 6px; background: var(--gridline); border-radius: 3px; overflow: hidden; }}

@@ -23,12 +23,13 @@ This is a real gate, not a formality: **zero `scout.py` calls happen before it c
 Only after Step 0's confirmation. If the idea text is somehow still empty or just whitespace at this point, ask the user for an actual idea instead of proceeding.
 
 Decompose the confirmed idea into:
-- **4-6 search query phrases** — plain keywords capturing different angles/synonyms of the idea. Do not include GitHub search qualifiers (`stars:`, `topic:`, etc.) — `scout.py` adds those itself.
+- **4-6 search query phrases** — plain keywords capturing different angles/synonyms of the idea, framed as a whole project (this is the Tier 1, whole-project search). Do not include GitHub search qualifiers (`stars:`, `topic:`, etc.) — `scout.py` adds those itself. If early results are dominated by generic high-star infrastructure/tooling repos that don't actually match the idea's substance (a real risk for broad ecosystem terms like "react native"), that's a sign the queries were too generic — tighten them toward the idea's actual domain rather than enriching obviously-irrelevant results just because they scored high.
 - **One additional query aimed at an "awesome list"** for the idea's domain, e.g. `awesome self-hosted` or `awesome habit tracker` — phrase it the way such a list would actually be named.
 - **A short requirements list** — the concrete features/capabilities implied by the idea, as short noun phrases (e.g. `streak tracking`, `social accountability`, `push reminders`). This becomes both the scoring keywords and the rows of the feature-map table later. Keep it to what the user actually asked for — don't invent requirements they didn't imply.
 - **Optional topics** — 1-3 GitHub topics likely relevant, only if genuinely obvious (e.g. `react`, `self-hosted`). Skip if unsure; it narrows results and a wrong guess loses good candidates.
+- **Up to 3 `technical_components`** — the subset of the requirements list that represent a discrete, plausibly-standalone technical capability someone might have built as its own library, not every requirement qualifies. A capability like "full-screen alarm-style reminders" is a component; a behavior like "night wind-down routine" isn't — it's an application of other components (scheduling + conversational chat), not something with its own library. For each real component, give it a short name and 2-3 search phrasings framed as that specific capability (e.g. "React Native full screen alarm lock screen", not "habit app"). Prepare this now, cheaply — it's only actually searched if Step 6's Tier 1 search comes back weak.
 
-## Step 2 — Search (metadata-only, cheap)
+## Step 2 — Search (Tier 1: whole project, metadata-only, cheap)
 
 Run:
 
@@ -79,7 +80,7 @@ Don't decide by hand whether the answer is one repo, a combination, or neither �
 
 Create `repobridge-reports/` if it doesn't exist. This step runs in two passes because the mode isn't known until the script computes it — don't guess it yourself.
 
-**Pass 1 — write the sidecar without `pick_rationale`.** Write `repobridge-reports/<slug>-<YYYYMMDD>.json` (`<slug>` = idea in kebab-case, truncated to ~40 chars), matching this shape exactly, with **`repos` ordered best-first**:
+**Pass 1 — write the sidecar without `pick_rationale`.** Write `repobridge-reports/<slug>-<YYYYMMDD>.json` (`<slug>` = idea in kebab-case, truncated to ~40 chars), matching this shape exactly, with **`repos` ordered best-first**. Tag every repo's `found_via` — `"whole-project search"` for everything from Tier 1:
 
 ```json
 {
@@ -91,7 +92,7 @@ Create `repobridge-reports/` if it doesn't exist. This step runs in two passes b
       "full_name": "owner/repo", "url": "...", "stars": 0,
       "license_spdx": "MIT", "pushed_at": "<ISO 8601>",
       "verified_score": 0.0, "deployability_score": 0.0,
-      "coverage_pct": 0.0,
+      "coverage_pct": 0.0, "found_via": "whole-project search",
       "requirement_status": {
         "<requirement>": {"status": "present|partial|missing", "evidence": "<quote or paraphrase, empty string if missing>"}
       }
@@ -100,21 +101,35 @@ Create `repobridge-reports/` if it doesn't exist. This step runs in two passes b
 }
 ```
 
-**Pass 2 — learn the mode and stats, then patch in `pick_rationale`:**
+**Pass 2 — learn the mode:**
 
 ```
 python3 .claude/skills/repobridge/dashboard.py repobridge-reports/<slug>-<YYYYMMDD>.json --print-stats
 ```
 
-Read `mode` off the output, then write `pick_rationale` into the sidecar to match it — this is the one thing that still needs your judgment, everything else in the output is arithmetic:
+If `mode` is `"single"` or `"composition"`, skip to Pass 3 below — Tier 1 already found a good answer, and chasing a marginally better one isn't worth more search calls.
+
+**Pass 2.5 — Tier 2 component search, only if `mode: "custom_build"`.** This is the escalation, not a default: nothing in the whole-project pool cleared the bar, so search specifically for the `technical_components` identified in Step 1 instead of giving up.
+
+1. Run one more `scout.py search`, batching all of the components' query phrasings together in one invocation (same `--requirements`, the full original list — keyword-overlap scoring should still reflect the whole idea, not just the component):
+   ```
+   python3 .claude/skills/repobridge/scout.py search \
+     --queries "<component 1 phrasing>" "<component 1 phrasing 2>" "<component 2 phrasing>" ... \
+     --requirements "<r1>" "<r2>" ... --min-stars 30 --limit 30
+   ```
+2. Drop any repo whose `full_name` already appears in Tier 1's results. Select the new top 3-5 by `metadata_score`, enrich them, and score them against the full requirements list exactly like Step 4 — same strict-evaluator standard, no exceptions for a second-tier search. Tag each `found_via: "component search: <component name>"`.
+3. Merge Tier 1 + Tier 2 repos into one list, re-rank the combined pool best-first by `coverage_pct` (Step 5's judgment, just over more candidates).
+4. Rewrite the sidecar with the merged, re-ranked list. Re-run `--print-stats` — **this is the real, final mode.** If it's still `custom_build`, that's an honest outcome too: say plainly that even targeted component searches didn't find a strong match, don't retry again.
+
+**Pass 3 — patch in `pick_rationale`** to match whichever mode the (possibly Tier-2-augmented) `--print-stats` output landed on — this is the one thing that still needs your judgment, everything else in the output is arithmetic:
 - `mode: "single"` → 1-2 sentences on why `repos[0]` beat the runner-up, and its main gap.
-- `mode: "composition"` → 1-2 sentences on why stitching `contributing_repos` together makes sense (and note if their licenses/stacks are actually compatible — that's a real judgment call the script can't make).
+- `mode: "composition"` → 1-2 sentences on why stitching `contributing_repos` together makes sense — and if any of them came from a component search, say so explicitly (that's the "what's picked from where and why" a composition answer should actually deliver). Note if their licenses/stacks are actually compatible — that's a real judgment call the script can't make.
 - `mode: "custom_build"` → 1-2 sentences on why nothing clears the bar, don't hedge into "it depends" if the evidence is genuinely this thin.
 
 Use the `--print-stats` output verbatim in the markdown report's opening section — `match_pct`, `features_left` (with the present/partial/missing breakdown), `estimated_hours_remaining`/`estimated_days_remaining`, `estimated_tokens_saved`/`estimated_tokens_saved_pct`, `methodology_note`, and (`custom_build` only) `note`. These are estimates; say so as plainly as the dashboard does. Do not recompute or restate them differently than what the command printed.
 
 The rest of the markdown depends on the mode:
-- **single/custom_build**: the existing detail format, for all top 3-5 repos — Name/URL/stars/last commit/license (flag explicitly if copyleft, which only happens if `--allow-copyleft` was used), verified rationale (the specific `verified_signals` that passed, not a vibe), the Present/Partial/Missing feature-map table with evidence quotes, coverage %, and the missing slice.
+- **single/custom_build**: the existing detail format, for all top 3-5 repos — Name/URL/stars/last commit/license (flag explicitly if copyleft, which only happens if `--allow-copyleft` was used), `found_via` if it's not the whole-project search, verified rationale (the specific `verified_signals` that passed, not a vibe), the Present/Partial/Missing feature-map table with evidence quotes, coverage %, and the missing slice.
 - **composition**: same per-repo detail format, plus a "how the pieces fit" table up top — one row per requirement, which repo covers it and how, straight from `--print-stats`'s `composition` array (don't re-derive it).
 
 Finally, generate the dashboard:
@@ -137,3 +152,5 @@ After writing all three, summarize in chat: the pick (or composition, or the cus
 - The time and token-savings figures are heuristic estimates from `dashboard.py --print-stats`, not measurements. Always carry the `methodology_note` alongside them — never present them as precise or committed.
 - The pick mode (single/composition/custom_build) and the composition's requirement-to-repo attribution always come from `dashboard.py --print-stats` — never decided or assigned by hand, even when the answer seems obvious.
 - Step 0's confirmation gate is not optional and not skippable because an idea "looks clear enough" — even a one-turn reflect-and-confirm still has to happen before Step 1.
+- Tier 2 component search only fires when Tier 1 lands in `custom_build` — it's an escalation, not a default second pass to run every time. If Tier 2 also lands in `custom_build`, that's a final, honest answer — don't search a third time.
+- Every repo's `found_via` is disclosed in the report, not smoothed over — a component-search result should never be presented as if it came from the same search as everything else.
