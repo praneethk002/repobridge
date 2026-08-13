@@ -1,0 +1,62 @@
+{
+  "idea": "habit accountability app: conversational goal scheduling, full-screen alarm-style reminders, and AI-driven night/morning routines",
+  "requirements": ["conversational onboarding and goal scheduling", "full-screen alarm-style reminders", "reliable background scheduling", "night wind-down routine", "morning wake and planning routine", "periodic screen-time check-ins"],
+  "generated_at": "2026-08-13T00:00:00Z",
+  "pick_rationale": "Nothing found is close. The best individual match, ZenSlice, is a Windows desktop screen-time tracker — a different platform entirely from the React Native mobile app this idea needs — and it only covers the periodic check-in requirement. Bundel and neuropathAI each cover at most a sliver, and are Android-notification and Firefox-extension projects respectively, neither reusable as a mobile codebase. The core of this idea — conversational AI onboarding that builds a schedule, alarm-grade full-screen interrupts, and scheduled night/morning routine calls — doesn't have an existing open-source analog. Expect to build most of this from scratch, likely composing narrow single-purpose libraries (a full-screen-alarm package, a background scheduler, an LLM chat SDK) rather than forking any one app.",
+  "repos": [
+    {
+      "full_name": "Pratham754/ZenSlice-Release",
+      "url": "https://github.com/Pratham754/ZenSlice-Release",
+      "stars": 11,
+      "license_spdx": "Apache-2.0",
+      "pushed_at": "2026-07-16T17:21:14Z",
+      "verified_score": 33.3,
+      "deployability_score": 0.0,
+      "coverage_pct": 16.7,
+      "requirement_status": {
+        "conversational onboarding and goal scheduling": {"status": "missing", "evidence": ""},
+        "full-screen alarm-style reminders": {"status": "missing", "evidence": "Only a Windows toast notification at limit thresholds, not full-screen"},
+        "reliable background scheduling": {"status": "missing", "evidence": "Runs in system tray tracking usage, but doesn't schedule reminders/events"},
+        "night wind-down routine": {"status": "missing", "evidence": ""},
+        "morning wake and planning routine": {"status": "missing", "evidence": ""},
+        "periodic screen-time check-ins": {"status": "present", "evidence": "\"Set a daily cap... Get a Windows notification 5 minutes before the limit and again when you hit it\""}
+      }
+    },
+    {
+      "full_name": "code-with-the-italians/bundel",
+      "url": "https://github.com/code-with-the-italians/bundel",
+      "stars": 294,
+      "license_spdx": "Apache-2.0",
+      "pushed_at": "2026-08-13T05:58:31Z",
+      "verified_score": 100.0,
+      "deployability_score": 0.0,
+      "coverage_pct": 8.3,
+      "requirement_status": {
+        "conversational onboarding and goal scheduling": {"status": "missing", "evidence": ""},
+        "full-screen alarm-style reminders": {"status": "missing", "evidence": "Batches and releases notifications at set times, not full-screen/unmissable"},
+        "reliable background scheduling": {"status": "partial", "evidence": "\"groups up notifications and only releases them in batches, at set times\" — timed release logic, but for notification batching, not alarm-grade scheduling"},
+        "night wind-down routine": {"status": "missing", "evidence": ""},
+        "morning wake and planning routine": {"status": "missing", "evidence": ""},
+        "periodic screen-time check-ins": {"status": "missing", "evidence": "Reduces notification interruptions rather than checking in on usage"}
+      }
+    },
+    {
+      "full_name": "Modaniels/neuropathAI",
+      "url": "https://github.com/Modaniels/neuropathAI",
+      "stars": 11,
+      "license_spdx": "MIT",
+      "pushed_at": "2026-01-17T08:57:50Z",
+      "verified_score": 33.3,
+      "deployability_score": 0.0,
+      "coverage_pct": 8.3,
+      "requirement_status": {
+        "conversational onboarding and goal scheduling": {"status": "partial", "evidence": "\"Personalized coaching after each session\" via Gemini AI — post-session AI insight, not an upfront onboarding conversation that builds a schedule"},
+        "full-screen alarm-style reminders": {"status": "missing", "evidence": "A draggable floating widget, not a full-screen takeover"},
+        "reliable background scheduling": {"status": "missing", "evidence": ""},
+        "night wind-down routine": {"status": "missing", "evidence": ""},
+        "morning wake and planning routine": {"status": "missing", "evidence": ""},
+        "periodic screen-time check-ins": {"status": "missing", "evidence": "User-initiated start/stop sessions, not automatic periodic check-ins"}
+      }
+    }
+  ]
+}
