@@ -60,7 +60,7 @@ For each enriched repo, read `readme_excerpt` and evaluate it against the requir
 
 Combine your Step 4 relevance read with `repo['verified_score']` and `repo['deployability_score']` to pick the final **top 3-5**. This is a judgment call, not a re-sort by `metadata_score` — a repo that ranked #1 on stars/recency but covers little of the actual idea should not out-rank a smaller, better-fitting repo here.
 
-## Step 6 — Write the report
+## Step 6 — Write the report, sidecar, and dashboard
 
 Create `repobridge-reports/` if it doesn't exist. Write `repobridge-reports/<slug>-<YYYYMMDD>.md`, where `<slug>` is the idea in kebab-case, truncated to ~40 chars.
 
@@ -72,7 +72,36 @@ For each of the top 3-5 repos, include:
 - **Coverage %**
 - **Missing slice** — the concrete, named list of what's not covered, i.e. what a developer would actually need to build
 
-After writing, summarize in chat: the top pick, why, and the file path. Don't paste the full report inline — point to the file.
+Alongside the markdown, write the same data as a JSON sidecar at `repobridge-reports/<slug>-<YYYYMMDD>.json`, matching this shape exactly (it feeds the dashboard, so the keys are load-bearing):
+
+```json
+{
+  "idea": "<the original idea text>",
+  "requirements": ["<requirement 1>", "<requirement 2>", ...],
+  "generated_at": "<ISO 8601 timestamp>",
+  "repos": [
+    {
+      "full_name": "owner/repo", "url": "...", "stars": 0,
+      "license_spdx": "MIT", "pushed_at": "<ISO 8601>",
+      "verified_score": 0.0, "deployability_score": 0.0,
+      "coverage_pct": 0.0,
+      "requirement_status": {
+        "<requirement>": {"status": "present|partial|missing", "evidence": "<quote or paraphrase, empty string if missing>"}
+      }
+    }
+  ]
+}
+```
+
+Then generate the dashboard:
+
+```
+python3 .claude/skills/repobridge/dashboard.py repobridge-reports/<slug>-<YYYYMMDD>.json
+```
+
+This writes `repobridge-reports/<slug>-<YYYYMMDD>.html` — a static, self-contained file with no network calls at render time. Do not hand-write or skip this file; it's generated purely from the sidecar you already wrote, so it can never show data the report doesn't.
+
+After writing all three, summarize in chat: the top pick, why, and the three file paths (`.md`, `.json`, `.html`). Don't paste the full report inline — point to the files.
 
 ## Guardrails
 
@@ -80,3 +109,4 @@ After writing, summarize in chat: the top pick, why, and the file path. Don't pa
 - Never call the GitHub API by any path other than `scout.py`.
 - If `scout.py` reports a rate-limit or auth error, stop and surface it — don't retry in a loop.
 - This skill produces a report, not code. Do not clone repos or write application code as part of this skill.
+- The dashboard is always generated from the JSON sidecar via `dashboard.py`, never hand-written — that's what guarantees it can't show anything the report doesn't.

@@ -1,0 +1,75 @@
+{
+  "idea": "habit tracker with streaks and social accountability",
+  "requirements": ["streak tracking", "social accountability", "reminders", "progress visualization", "multi-user"],
+  "generated_at": "2026-08-13T00:00:00Z",
+  "repos": [
+    {
+      "full_name": "redpangilinan/iotawise",
+      "url": "https://github.com/redpangilinan/iotawise",
+      "stars": 264,
+      "license_spdx": "MIT",
+      "pushed_at": "2025-10-29T10:58:14Z",
+      "verified_score": 66.7,
+      "deployability_score": 33.3,
+      "coverage_pct": 70.0,
+      "requirement_status": {
+        "streak tracking": {"status": "present", "evidence": "\"Activity Streak Monitoring\" listed as a feature"},
+        "social accountability": {"status": "missing", "evidence": "No mention anywhere in the README"},
+        "reminders": {"status": "partial", "evidence": "\"Web Push Notifications (coming soon)\" — not shipped yet"},
+        "progress visualization": {"status": "present", "evidence": "\"Dashboard Analytics\" feature"},
+        "multi-user": {"status": "present", "evidence": "\"Google Authentication\" implies per-user accounts"}
+      }
+    },
+    {
+      "full_name": "lehashree/eco-habit-tracker",
+      "url": "https://github.com/lehashree/eco-habit-tracker",
+      "stars": 53,
+      "license_spdx": "MIT",
+      "pushed_at": "2026-04-05T17:04:28Z",
+      "verified_score": 33.3,
+      "deployability_score": 0.0,
+      "coverage_pct": 40.0,
+      "requirement_status": {
+        "streak tracking": {"status": "present", "evidence": "\"Streak system to stay consistent\""},
+        "social accountability": {"status": "missing", "evidence": "No mention"},
+        "reminders": {"status": "missing", "evidence": "Not in feature list or roadmap"},
+        "progress visualization": {"status": "present", "evidence": "\"Weekly progress visualization\""},
+        "multi-user": {"status": "missing", "evidence": "README's own Future Improvements list includes User authentication — confirms it doesn't exist yet"}
+      }
+    },
+    {
+      "full_name": "MuffinTheDragon/daily-habit-tracker",
+      "url": "https://github.com/MuffinTheDragon/daily-habit-tracker",
+      "stars": 80,
+      "license_spdx": "MIT",
+      "pushed_at": "2026-01-04T22:25:34Z",
+      "verified_score": 33.3,
+      "deployability_score": 0.0,
+      "coverage_pct": 40.0,
+      "requirement_status": {
+        "streak tracking": {"status": "present", "evidence": "\"Streaks based, track and beat your longest streaks\", plus streak freezes"},
+        "social accountability": {"status": "missing", "evidence": "No mention"},
+        "reminders": {"status": "missing", "evidence": "No mention"},
+        "progress visualization": {"status": "present", "evidence": "\"Visual map for tracking consistency\""},
+        "multi-user": {"status": "missing", "evidence": "No auth/accounts mentioned; positions itself as offline-first single-user"}
+      }
+    },
+    {
+      "full_name": "daya0576/beaverhabits",
+      "url": "https://github.com/daya0576/beaverhabits",
+      "stars": 1813,
+      "license_spdx": "BSD-3-Clause",
+      "pushed_at": "2026-08-09T08:09:15Z",
+      "verified_score": 100.0,
+      "deployability_score": 0.0,
+      "coverage_pct": 20.0,
+      "requirement_status": {
+        "streak tracking": {"status": "partial", "evidence": "Topic-tagged 'streaks', but visible README doesn't describe streak mechanics directly — full feature list lives in an external wiki"},
+        "social accountability": {"status": "missing", "evidence": "No mention"},
+        "reminders": {"status": "missing", "evidence": "No mention"},
+        "progress visualization": {"status": "missing", "evidence": "No mention in visible README"},
+        "multi-user": {"status": "partial", "evidence": "TRUSTED_LOCAL_EMAIL env var implies an auth/account concept, reads as single-tenant self-hosting"}
+      }
+    }
+  ]
+}
