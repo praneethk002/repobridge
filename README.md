@@ -6,6 +6,10 @@ That used to be the default instinct in software engineering. Before writing a l
 
 RepoBridge brings that habit back. You talk through your app idea the same way you'd talk to any AI coding tool, and instead of jumping straight into writing code, it searches real GitHub repositories for ones that already do most of what you're describing. It maps your idea against what it finds, tells you honestly how much is already covered, and shows you exactly what's left to build. It doesn't write your app for you. It hands you a real starting point and an honest list of what's missing.
 
+## Demo
+
+**Idea:** *local-first markdown note-taking app with a minimalist editor and local AI embeddings for semantic clustering and tag suggestion*
+
 <p align="center">
   <img src="docs/images/dashboard-hero.jpg" alt="RepoBridge dashboard hero card showing a no-strong-match result with match %, features left, time remaining, and tokens saved" width="720">
 </p>
@@ -13,7 +17,7 @@ RepoBridge brings that habit back. You talk through your app idea the same way y
   <img src="docs/images/dashboard-detail.jpg" alt="RepoBridge dashboard detail view: what the pick covers, runner-ups, and the full side-by-side candidate comparison" width="720">
 </p>
 
-*From a real run, see [`local-markdown-notes-ai-20260813.md`](repobridge-reports/local-markdown-notes-ai-20260813.md) for the full report behind this dashboard.*
+*From a real run. Full report: [`local-markdown-notes-ai-20260813.md`](repobridge-reports/local-markdown-notes-ai-20260813.md).*
 
 ## Why this beats starting from scratch
 
@@ -43,13 +47,13 @@ flowchart TD
     H2 --> K["dashboard.py<br/>static HTML dashboard"]
 ```
 
-Retrieval and scoring are deliberately split into stages so the expensive work (fetching README text, checking for CI/Docker/deploy config) only ever runs against a handful of pre-filtered candidates, not every repo that shows up in a search. See [`docs/plan.md`](docs/plan.md) for the full design rationale, including specific tradeoffs made on purpose:
+Retrieval and scoring happen in stages, so the expensive work (fetching READMEs, checking for CI/Docker/deploy config) only runs on a short, pre-filtered list, not every repo a search turns up. Full design rationale is in [`docs/plan.md`](docs/plan.md). A few decisions worth knowing about:
 
-- **Copyleft licenses (GPL/AGPL) are hard-blocked by default.** A builder using this without a lawyer in the loop shouldn't be able to silently walk into a copyleft obligation on a closed-source project. Override with `--allow-copyleft` if you know what you're doing.
-- **The staleness cutoff is 12 months, not 6.** A stable, feature-complete repo can go months without a commit without being abandoned — a tighter cutoff would systematically exclude exactly the kind of "boring, finished" code this tool should prefer. Recency instead weights the *ranking*, not a hard gate.
-- **Step 0 is a real gate, not a formality.** Going straight from a one-line idea to search queries risks locking in a guessed interpretation before anyone can correct it. It's adaptive, not a forced wizard — a clear idea gets a one-turn reflect-and-confirm, not a multi-round interrogation.
-- **The pick mode is a fixed threshold, not an LLM judgment call.** See "The pick" below.
-- **Tier 2 (component search) only fires on `custom_build`, not every run.** Whole-project searches for something like "React Native habit tracker" tend to surface generic high-star infrastructure (the RN framework itself, UI kits) rather than actual matches — a real failure mode, not hypothetical (see the worked example below). When that happens, searching for the idea's discrete technical primitives specifically (e.g. "React Native full-screen alarm" instead of "habit app") finds better candidates than hoping they surface as a side effect of a whole-app query. It's an escalation, run once, not a default second pass — if Tier 1 already found a strong single repo or a strong composition, spending more search calls chasing a marginally better answer isn't worth it.
+- **Copyleft (GPL/AGPL) is blocked by default.** Avoids an unintended copyleft obligation on a closed-source project. Override with `--allow-copyleft`.
+- **Staleness cutoff is 12 months.** A quiet repo isn't always a dead one. Recency affects ranking, not eligibility.
+- **Step 0 is a real gate.** Claude confirms your idea before searching, so a misread idea doesn't waste a whole run.
+- **Pick mode is a fixed threshold, not a judgment call.** See "The pick" below.
+- **Tier 2 only runs if Tier 1 comes up empty.** A whole-project search for something like "React Native habit tracker" often surfaces generic frameworks instead of real matches. When that happens, RepoBridge searches for the idea's specific technical pieces instead, like "React Native full-screen alarm." It's a one-time escalation, not a default second pass.
 
 ## Quickstart
 
@@ -57,13 +61,13 @@ Retrieval and scoring are deliberately split into stages so the expensive work (
 - `gh auth login` (uses your existing GitHub CLI session), or
 - a `GITHUB_TOKEN` environment variable
 
-No `pip install` — every script here is Python stdlib only, by design. No database, no server, no API key beyond GitHub's own.
+No `pip install`. Every script here is Python stdlib only, by design. No database, no server, no API key beyond GitHub's own.
 
 ```bash
 /repobridge habit tracker with streaks and social accountability
 ```
 
-This runs inside Claude Code as a skill (`.claude/skills/repobridge/SKILL.md`) — Claude does the semantic reasoning (query generation, relevance judgment, gap analysis); the Python scripts do the deterministic, auditable parts (search, filter, score, pick mode). First response is a plain-language reflection of the idea asking you to confirm it — nothing hits the GitHub API until you do.
+This runs inside Claude Code as a skill. Claude handles the reasoning (queries, relevance judgment, gap analysis); the Python scripts handle the deterministic parts (search, filter, score, pick mode). The first response just reflects your idea back for confirmation. Nothing hits the GitHub API until you approve it.
 
 You can also drive the retrieval engine directly, without Claude, for debugging or scripting:
 
@@ -97,15 +101,15 @@ repobridge-reports/
 
 ## The pick
 
-Each run produces three artifacts for a given idea, all generated from one JSON sidecar so they can never disagree: a markdown report, the sidecar itself, and a static HTML dashboard.
+Each run produces three files from one JSON sidecar, so they can't disagree: a markdown report, the sidecar itself, and a static HTML dashboard.
 
-The dashboard leads with a single answer, not a list — a hero card, in the spirit of a clean dark-mode answer page. What's *in* that hero card depends on a fixed coverage threshold (`dashboard.py`'s `compute_pick()`), never an LLM judgment call:
+The dashboard leads with one answer, not a list. What goes in that hero card is decided by a fixed coverage threshold in `dashboard.py`'s `compute_pick()`, never by the AI:
 
 | Mode | When | Hero shows |
 |---|---|---|
 | **single** | The best repo alone covers ≥70% of requirements | That repo, why it won over the runner-up |
 | **composition** | No repo clears 70% alone, but the top 3 together do, with a real margin | The 2-3 repos stitched together, which one covers which requirement (derived mechanically, never hand-assigned), and why combining them makes sense |
-| **custom_build** | Nothing clears 70%, alone or combined | Said plainly — the closest reference found, framed as a reference point, not a recommendation |
+| **custom_build** | Nothing clears 70%, alone or combined | Said plainly. The closest reference found, framed as a reference point, not a recommendation |
 
 Whichever mode applies, the hero also shows four headline numbers:
 
@@ -116,13 +120,13 @@ Whichever mode applies, the hero also shows four headline numbers:
 | **Est. time remaining** | Heuristic: hours per missing/partial feature, converted to days |
 | **Tokens saved** | Heuristic: tokens an LLM would spend generating the covered portion from scratch |
 
-The last two are explicitly estimates, not measurements — the fixed formula behind them (and its constants) lives in `dashboard.py`, and the page always shows the methodology note beside the numbers rather than presenting them as precise. `dashboard.py --print-stats` prints the same numbers (mode included) as JSON so the markdown report states the identical figures instead of Claude re-deriving them by hand.
+The last two are estimates, not measurements. Their formula lives in `dashboard.py`, and the methodology note always sits next to the numbers. `dashboard.py --print-stats` prints these same numbers as JSON, so the markdown report states the exact figures instead of Claude recalculating them by hand.
 
-Below the hero, every artifact still shows the full comparison — stars, license, verified/deployability scores, and a Present/Partial/Missing grid for every candidate considered, each cell backed by a one-line evidence quote from the README. The single-answer framing up top never comes at the cost of the audit trail underneath it, and it never depends on which mode won.
+Below the hero is the full comparison: stars, license, verified/deployability scores, and a Present/Partial/Missing grid for every candidate, each cell backed by a quote from the README. The single answer up top never hides the audit trail underneath it.
 
-Each candidate also carries a `found_via` label — `"whole-project search"` or `"component search: <name>"` — shown on its compare-card and disclosed in the report. When a composition mixes pieces from both, the report says explicitly which repo came from which search, not just that they were combined.
+Each candidate also carries a `found_via` label, either `"whole-project search"` or `"component search: <name>"`, shown on its card and in the report. If a composition mixes pieces from both, the report says exactly which repo came from which search.
 
-A worked example, from a real (unmocked) run against the idea *"habit tracker with streaks and social accountability"*, is checked into `repobridge-reports/`. Its headline finding — none of the four real candidates found had any social-accountability feature — is exactly the kind of honest gap this tool exists to surface; it's not a cherry-picked success case.
+A real, unmocked example is checked into `repobridge-reports/`: a habit-tracker idea where none of the four candidates found actually had a social-accountability feature. That's the kind of honest gap this tool is built to surface, not a cherry-picked success story.
 
 ## Testing
 
@@ -130,19 +134,26 @@ A worked example, from a real (unmocked) run against the idea *"habit tracker wi
 python3 -m unittest discover -s tests -v
 ```
 
-33 tests, no network calls, no mocked-into-passing assumptions — they exercise the actual functions in `scout.py`: the license allowlist and copyleft block, the staleness cutoff at both the default and a custom threshold, the `metadata_score` formula (recency + star cap + keyword overlap), the awesome-list link-extraction regex (including exclusions and dedup), GitHub auth resolution (env var, `gh` CLI fallback, both failure modes), and `api_request`'s fail-loud behavior on rate limits versus its configurable soft-fail on expected 404s.
+33 tests, no network calls, nothing mocked into passing. They exercise the real functions in `scout.py`:
+
+- the license allowlist and copyleft block
+- the staleness cutoff, at the default and a custom threshold
+- the `metadata_score` formula (recency, star cap, keyword overlap)
+- the awesome-list link-extraction regex (exclusions, dedup)
+- GitHub auth resolution (env var, `gh` CLI fallback, both failure modes)
+- `api_request`'s fail-loud behavior on rate limits vs. its soft-fail on expected 404s
 
 ## Guardrails
 
-- **Fail loud, never degrade silently.** Missing auth, a rate limit, or zero surviving candidates all exit non-zero with a clear message — never a guessed or partial result presented as real.
+- **Fail loud, never degrade silently.** Missing auth, a rate limit, or zero candidates all exit with a clear error. Never a guessed result presented as real.
 - **No dynamic execution of fetched content.** README text and repo metadata are data, never `eval`'d or shelled out.
-- **Deterministic scoring stays auditable.** Every score ships alongside the exact signals that produced it (`score_breakdown`, `verified_signals`, `deployability_signals`) — nothing is a hidden weighting.
-- **All GitHub access goes through `scout.py`.** Claude never calls the API directly, so auth, filtering, and error-handling logic live in one place.
+- **Deterministic scoring stays auditable.** Every score ships with the exact signals behind it (`score_breakdown`, `verified_signals`, `deployability_signals`). No hidden weighting.
+- **All GitHub access goes through `scout.py`.** Claude never calls the API directly, so auth, filtering, and error handling live in one place.
 - **No secrets in output.** The token is read from the environment and never echoed, including in error messages.
-- **Estimates are labeled as estimates.** Time-remaining and tokens-saved are heuristic, not measured — they always ship with the formula's methodology note, never as bare precise-looking numbers.
-- **The pick mode is never decided by hand.** Single vs. composition vs. custom-build, and the composition's requirement-to-repo attribution, always come from `dashboard.py --print-stats` — the same "don't let the LLM freehand arithmetic" rule applied to the newest part of the pipeline.
+- **Estimates are labeled as estimates.** Time-remaining and tokens-saved are heuristics, not measurements, and always ship with the methodology note.
+- **The pick mode is never decided by hand.** Single, composition, or custom-build, plus the composition's requirement-to-repo mapping, always comes from `dashboard.py --print-stats`.
 - **The confirmation gate isn't skippable.** Even an idea that looks obviously clear still gets a one-turn reflect-and-confirm before any search query is built.
 
 ## What this deliberately doesn't do
 
-RepoBridge stops at analysis. It does not clone repositories, does not write application code, and does not decide the "diff-only" implementation step for you — that's a separate, lower-risk problem (it's mostly a well-scoped prompt) that doesn't need solving before the harder question does: can this tool reliably tell you what already exists and what doesn't? That's what's built and tested here.
+RepoBridge stops at analysis. It doesn't clone repos, write application code, or handle the actual "diff-only" build step. That's a separate, easier problem, mostly a well-scoped prompt. The harder question, and the one this tool actually answers, is whether something you need already exists.
