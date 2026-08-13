@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RepoBridge: local-first markdown note-taking app with a minimalist editor and local AI embeddings for semantic clustering and tag suggestion</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0a0b0c;
+    --surface: #131517;
+    --surface-2: #1b1e21;
+    --text-primary: #f4f5f5;
+    --text-secondary: #a8adb3;
+    --muted: #6b7075;
+    --gridline: #24272b;
+    --border: rgba(255,255,255,0.08);
+    --accent: #3987e5;
+    --accent-soft: rgba(57,135,229,0.14);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg: #f9f9f7;
+      --surface: #ffffff;
+      --surface-2: #f3f3f1;
+      --text-primary: #0b0b0b;
+      --text-secondary: #52514e;
+      --muted: #898781;
+      --gridline: #e1e0d9;
+      --border: rgba(11,11,11,0.08);
+      --accent: #2a78d6;
+      --accent-soft: rgba(42,120,214,0.10);
+    }
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f9f9f7;
+    --surface: #ffffff;
+    --surface-2: #f3f3f1;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --muted: #898781;
+    --gridline: #e1e0d9;
+    --border: rgba(11,11,11,0.08);
+    --accent: #2a78d6;
+    --accent-soft: rgba(42,120,214,0.10);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0a0b0c;
+    --surface: #131517;
+    --surface-2: #1b1e21;
+    --text-primary: #f4f5f5;
+    --text-secondary: #a8adb3;
+    --muted: #6b7075;
+    --gridline: #24272b;
+    --border: rgba(255,255,255,0.08);
+    --accent: #3987e5;
+    --accent-soft: rgba(57,135,229,0.14);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.45;
+  }
+  .page { max-width: 980px; margin: 0 auto; padding: 40px 20px 72px; }
+  .masthead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .wordmark { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); text-transform: uppercase; }
+  .meta { color: var(--muted); font-size: 0.8rem; }
+  .query-pill {
+    display: inline-block; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 10px 20px; font-size: 1rem; color: var(--text-secondary);
+    margin-bottom: 28px;
+  }
+  .hero {
+    background: linear-gradient(180deg, var(--accent-soft), transparent 60%), var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
+    border-radius: 16px;
+    padding: 28px 28px 22px;
+    margin-bottom: 16px;
+  }
+  .hero-kicker { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .hero-name { margin: 0 0 10px; font-size: 1.7rem; text-wrap: balance; }
+  .hero-name a { color: var(--text-primary); text-decoration: none; }
+  .hero-name a:hover { text-decoration: underline; }
+  .hero-rationale { color: var(--text-secondary); font-size: 0.98rem; max-width: 60ch; margin: 0 0 22px; }
+  .hero-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+  .hero-chip {
+    display: inline-block; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 6px 16px; font-size: 1.05rem; font-weight: 600;
+    color: var(--text-primary); text-decoration: none;
+  }
+  .hero-chip:hover { text-decoration: underline; }
+  .checklist-via { color: var(--accent); font-size: 0.72rem; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--border); border-radius: 12px; overflow: hidden; }
+  .stat-tile { background: var(--surface-2); padding: 16px 14px; }
+  .stat-value { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-label { font-size: 0.76rem; color: var(--text-secondary); margin-top: 2px; }
+  .stat-sublabel { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
+  .methodology { font-size: 0.72rem; color: var(--muted); margin: 14px 2px 0; line-height: 1.5; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 8px; }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .panel-half { display: flex; flex-direction: column; }
+  .panel h3 { margin: 0 0 2px; font-size: 0.95rem; }
+  .panel-subtitle { color: var(--muted); font-size: 0.78rem; margin: 0 0 14px; }
+  .checklist-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--gridline); }
+  .checklist-row:last-child { border-bottom: none; }
+  .checklist-icon {
+    flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700;
+  }
+  .checklist-req { flex: 0 0 42%; font-size: 0.83rem; font-weight: 600; }
+  .checklist-evidence { flex: 1; font-size: 0.8rem; color: var(--text-secondary); }
+  .checklist-evidence em { color: var(--muted); font-style: normal; }
+  .runner-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--gridline); }
+  .runner-row:last-child { border-bottom: none; }
+  .runner-name { color: var(--text-primary); text-decoration: none; font-size: 0.85rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .runner-name:hover { text-decoration: underline; }
+  .section-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 28px 2px 12px; }
+  .compare-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .compare-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .compare-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .compare-head a { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .compare-head a:hover { text-decoration: underline; }
+  .compare-meta { font-size: 0.74rem; color: var(--muted); margin-bottom: 12px; }
+  .compare-found-via { font-size: 0.7rem; color: var(--accent); margin: -8px 0 10px; }
+  .mini-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .mini-label { width: 52px; flex: 0 0 auto; font-size: 0.7rem; color: var(--text-secondary); }
+  .mini-track { flex: 1; height: 6px; background: var(--gridline); border-radius: 3px; overflow: hidden; }
+  .mini-fill { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+  .mini-value { width: 24px; text-align: right; font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .disclosure { margin-top: 24px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+  .disclosure summary { cursor: pointer; padding: 14px 20px; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); list-style: none; }
+  .disclosure summary::-webkit-details-marker { display: none; }
+  .disclosure summary::before { content: "▸"; display: inline-block; margin-right: 8px; color: var(--accent); transition: transform 0.15s; }
+  .disclosure[open] summary::before { transform: rotate(90deg); }
+  .disclosure > .table-scroll { padding: 0 20px 20px; }
+  .empty { color: var(--muted); font-size: 0.85rem; }
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.8rem; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--gridline); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  a { color: var(--accent); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; color: #fff; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
+  .grid-table th { white-space: normal; }
+  footer { margin-top: 32px; color: var(--muted); font-size: 0.75rem; text-align: center; }
+  @media (max-width: 720px) {
+    .split { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .checklist-req { flex: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="masthead">
+      <span class="wordmark">RepoBridge</span>
+      <span class="meta">10 candidates &middot; 2026-08-13T00:00:00Z &middot; no network calls at render time</span>
+    </div>
+    <div class="query-pill">local-first markdown note-taking app with a minimalist editor and local AI embeddings for semantic clustering and tag suggestion</div>
+    
+    <section class="hero">
+      <div class="hero-kicker">No strong match</div>
+      <h2 class="hero-name">Closest reference: <a href="https://github.com/your-papa/obsidian-Smart2Brain">your-papa/obsidian-Smart2Brain</a></h2>
+      <p class="hero-rationale">Close, but no strong match. Tier 1 (whole-project search) topped out at 30% — iwe and Toney both handle flat-markdown storage well but neither has any embedding-based AI. Tier 2 (searching the Obsidian/Logseq plugin ecosystem specifically) found obsidian-Smart2Brain, which genuinely does what was asked: it embeds your vault&#x27;s notes into vectors via Ollama and runs entirely offline, doubling coverage to 60%. What it doesn&#x27;t have is a standing auto-clustering view (its embeddings power a chat/Q&amp;A interface, not a passive &#x27;related notes&#x27; grouping) or tag suggestion at all. The other three Tier 2 finds (claudian, Niki-AI, geminese) looked promising by name but all embed a cloud coding-agent CLI as a vault collaborator, not local embeddings — a real false-positive pattern worth naming: &#x27;AI plugin for Obsidian&#x27; surfaces agentic-coding-assistant plugins at least as often as semantic-search plugins. Combining candidates doesn&#x27;t help further — nothing else contributes a capability Smart2Brain lacks, so composition caps at the same 60%. This is a genuine near-miss: building on Smart2Brain&#x27;s embedding pipeline and adding a clustering view + tag suggestion on top is a much smaller lift than building the embedding infrastructure from scratch, even though it doesn&#x27;t clear the 70% bar for an unqualified single-pick recommendation.</p>
+      <div class="stat-grid">
+        <div class="stat-tile">
+          <div class="stat-value">60%</div>
+          <div class="stat-label">Match</div>
+          
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value">3</div>
+          <div class="stat-label">Features left</div>
+          <div class="stat-sublabel">of 5 total</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value">2.3d</div>
+          <div class="stat-label">Est. time remaining</div>
+          <div class="stat-sublabel">~14h</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value">45.0K</div>
+          <div class="stat-label">Tokens saved</div>
+          <div class="stat-sublabel">~60% vs. building from scratch</div>
+        </div></div>
+      <p class="methodology">Estimate, not a measurement: 8h per missing feature, 3h per partial one; token savings assume ~15,000 tokens to generate one feature from scratch, at half that for a partial. Actual time and token cost depend heavily on your stack and the specific features.</p>
+      <p class="methodology">No single repo or small combination clears a strong-fit bar (≥70%) for this idea — most of it will need custom building. Numbers above are relative to the closest reference found, not a recommended pick.</p>
+    </section>
+    <div class="split">
+      
+    <div class="panel panel-half">
+      <h3>What your-papa/obsidian-Smart2Brain covers</h3>
+      
+        <div class="checklist-row">
+          <span class="checklist-icon" style="background:#0ca30c;">✓</span>
+          <span class="checklist-req">local-first flat markdown file storage</span>
+          <span class="checklist-evidence">Obsidian plugin operating directly on your vault&#x27;s flat markdown notes — &quot;It can directly access and process your notes&quot;</span>
+        </div>
+        <div class="checklist-row">
+          <span class="checklist-icon" style="background:#fab219;">~</span>
+          <span class="checklist-req">minimalist markdown editor UI</span>
+          <span class="checklist-evidence">Inherits Obsidian&#x27;s own editor (the plugin adds a chat sidebar, not its own editor) — reasonably clean but not marketed as minimalist specifically</span>
+        </div>
+        <div class="checklist-row">
+          <span class="checklist-icon" style="background:#0ca30c;">✓</span>
+          <span class="checklist-req">local on-device AI embeddings</span>
+          <span class="checklist-evidence">&quot;All your notes will be embedded into vectors and then retrieved based on the similarity to your query&quot;; runs via Ollama, &quot;operate completely offline&quot;</span>
+        </div>
+        <div class="checklist-row">
+          <span class="checklist-icon" style="background:#fab219;">~</span>
+          <span class="checklist-req">automatic semantic note clustering</span>
+          <span class="checklist-evidence">RAG pipeline retrieves notes by embedding similarity for chat/Q&amp;A — real semantic retrieval infrastructure, but query-driven (&quot;chat with your notes&quot;), not a standing auto-grouped view</span>
+        </div>
+        <div class="checklist-row">
+          <span class="checklist-icon" style="background:#898781;">–</span>
+          <span class="checklist-req">semantic tag suggestion</span>
+          <span class="checklist-evidence">No tagging feature — it&#x27;s a Q&amp;A/chat interface over your notes, not a tag suggester</span>
+        </div>
+    </div>
+      
+    <div class="panel panel-half">
+      <h3>Runner-ups</h3>
+      <p class="panel-subtitle">Considered and ranked below the pick.</p>
+      
+        <div class="runner-row">
+          <a href="https://github.com/YishenTu/claudian" class="runner-name">YishenTu/claudian</a>
+          <span class="pill" style="background:#d03b3b;">30%</span>
+        </div>
+        <div class="runner-row">
+          <a href="https://github.com/iwe-org/iwe" class="runner-name">iwe-org/iwe</a>
+          <span class="pill" style="background:#d03b3b;">30%</span>
+        </div>
+        <div class="runner-row">
+          <a href="https://github.com/SourcewareLab/Toney" class="runner-name">SourcewareLab/Toney</a>
+          <span class="pill" style="background:#d03b3b;">30%</span>
+        </div>
+        <div class="runner-row">
+          <a href="https://github.com/Momoyu404/geminese" class="runner-name">Momoyu404/geminese</a>
+          <span class="pill" style="background:#d03b3b;">30%</span>
+        </div>
+        <div class="runner-row">
+          <a href="https://github.com/KeloYuan/Niki-AI" class="runner-name">KeloYuan/Niki-AI</a>
+          <span class="pill" style="background:#d03b3b;">30%</span>
+        </div>
+        <div class="runner-row">
+          <a href="https://github.com/tomboy-notes/tomboy-ng" class="runner-name">tomboy-notes/tomboy-ng</a>
+          <span class="pill" style="background:#d03b3b;">20%</span>
+        </div>
+        <div class="runner-row">
+          <a href="https://github.com/intrepidkarthi/dailyvox" class="runner-name">intrepidkarthi/dailyvox</a>
+          <span class="pill" style="background:#d03b3b;">10%</span>
+        </div>
+        <div class="runner-row">
+          <a href="https://github.com/tehtbl/awesome-note-taking" class="runner-name">tehtbl/awesome-note-taking</a>
+          <span class="pill" style="background:#d03b3b;">0%</span>
+        </div>
+        <div class="runner-row">
+          <a href="https://github.com/lifeos-plus/lifeos-cli" class="runner-name">lifeos-plus/lifeos-cli</a>
+          <span class="pill" style="background:#d03b3b;">0%</span>
+        </div>
+    </div>
+    </div>
+    
+    <div class="section-label">All candidates, side by side</div>
+    <div class="compare-grid">
+        <div class="compare-card">
+          <div class="compare-head">
+            <a href="https://github.com/your-papa/obsidian-Smart2Brain">your-papa/obsidian-Smart2Brain</a>
+            <span class="pill" style="background:#fab219;" title="Partial fit">60%</span>
+          </div>
+          <div class="compare-meta">1212★ &middot; MIT &middot; 2026-08-12</div>
+          <div class="compare-found-via">component search: obsidian/logseq semantic AI plugin</div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Verified</span>
+          <span class="mini-track"><span class="mini-fill" style="width:100%;"></span></span>
+          <span class="mini-value">100</span>
+        </div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Deploy</span>
+          <span class="mini-track"><span class="mini-fill" style="width:0%;"></span></span>
+          <span class="mini-value">0</span>
+        </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-head">
+            <a href="https://github.com/YishenTu/claudian">YishenTu/claudian</a>
+            <span class="pill" style="background:#d03b3b;" title="Weak fit">30%</span>
+          </div>
+          <div class="compare-meta">14746★ &middot; MIT &middot; 2026-08-12</div>
+          <div class="compare-found-via">component search: obsidian/logseq semantic AI plugin</div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Verified</span>
+          <span class="mini-track"><span class="mini-fill" style="width:100%;"></span></span>
+          <span class="mini-value">100</span>
+        </div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Deploy</span>
+          <span class="mini-track"><span class="mini-fill" style="width:0%;"></span></span>
+          <span class="mini-value">0</span>
+        </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-head">
+            <a href="https://github.com/iwe-org/iwe">iwe-org/iwe</a>
+            <span class="pill" style="background:#d03b3b;" title="Weak fit">30%</span>
+          </div>
+          <div class="compare-meta">1394★ &middot; Apache-2.0 &middot; 2026-08-12</div>
+          <div class="compare-found-via">whole-project search</div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Verified</span>
+          <span class="mini-track"><span class="mini-fill" style="width:100%;"></span></span>
+          <span class="mini-value">100</span>
+        </div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Deploy</span>
+          <span class="mini-track"><span class="mini-fill" style="width:0%;"></span></span>
+          <span class="mini-value">0</span>
+        </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-head">
+            <a href="https://github.com/SourcewareLab/Toney">SourcewareLab/Toney</a>
+            <span class="pill" style="background:#d03b3b;" title="Weak fit">30%</span>
+          </div>
+          <div class="compare-meta">201★ &middot; MIT &middot; 2026-05-27</div>
+          <div class="compare-found-via">whole-project search</div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Verified</span>
+          <span class="mini-track"><span class="mini-fill" style="width:67%;"></span></span>
+          <span class="mini-value">67</span>
+        </div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Deploy</span>
+          <span class="mini-track"><span class="mini-fill" style="width:0%;"></span></span>
+          <span class="mini-value">0</span>
+        </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-head">
+            <a href="https://github.com/Momoyu404/geminese">Momoyu404/geminese</a>
+            <span class="pill" style="background:#d03b3b;" title="Weak fit">30%</span>
+          </div>
+          <div class="compare-meta">57★ &middot; MIT &middot; 2026-03-29</div>
+          <div class="compare-found-via">component search: obsidian/logseq semantic AI plugin</div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Verified</span>
+          <span class="mini-track"><span class="mini-fill" style="width:67%;"></span></span>
+          <span class="mini-value">67</span>
+        </div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Deploy</span>
+          <span class="mini-track"><span class="mini-fill" style="width:0%;"></span></span>
+          <span class="mini-value">0</span>
+        </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-head">
+            <a href="https://github.com/KeloYuan/Niki-AI">KeloYuan/Niki-AI</a>
+            <span class="pill" style="background:#d03b3b;" title="Weak fit">30%</span>
+          </div>
+          <div class="compare-meta">54★ &middot; MIT &middot; 2026-05-22</div>
+          <div class="compare-found-via">component search: obsidian/logseq semantic AI plugin</div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Verified</span>
+          <span class="mini-track"><span class="mini-fill" style="width:33%;"></span></span>
+          <span class="mini-value">33</span>
+        </div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Deploy</span>
+          <span class="mini-track"><span class="mini-fill" style="width:0%;"></span></span>
+          <span class="mini-value">0</span>
+        </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-head">
+            <a href="https://github.com/tomboy-notes/tomboy-ng">tomboy-notes/tomboy-ng</a>
+            <span class="pill" style="background:#d03b3b;" title="Weak fit">20%</span>
+          </div>
+          <div class="compare-meta">446★ &middot; MIT &middot; 2026-08-02</div>
+          <div class="compare-found-via">whole-project search</div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Verified</span>
+          <span class="mini-track"><span class="mini-fill" style="width:67%;"></span></span>
+          <span class="mini-value">67</span>
+        </div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Deploy</span>
+          <span class="mini-track"><span class="mini-fill" style="width:0%;"></span></span>
+          <span class="mini-value">0</span>
+        </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-head">
+            <a href="https://github.com/intrepidkarthi/dailyvox">intrepidkarthi/dailyvox</a>
+            <span class="pill" style="background:#d03b3b;" title="Weak fit">10%</span>
+          </div>
+          <div class="compare-meta">14★ &middot; MIT &middot; 2026-08-13</div>
+          <div class="compare-found-via">whole-project search</div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Verified</span>
+          <span class="mini-track"><span class="mini-fill" style="width:67%;"></span></span>
+          <span class="mini-value">67</span>
+        </div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Deploy</span>
+          <span class="mini-track"><span class="mini-fill" style="width:0%;"></span></span>
+          <span class="mini-value">0</span>
+        </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-head">
+            <a href="https://github.com/tehtbl/awesome-note-taking">tehtbl/awesome-note-taking</a>
+            <span class="pill" style="background:#d03b3b;" title="Weak fit">0%</span>
+          </div>
+          <div class="compare-meta">939★ &middot; CC0-1.0 &middot; 2026-04-20</div>
+          <div class="compare-found-via">whole-project search</div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Verified</span>
+          <span class="mini-track"><span class="mini-fill" style="width:67%;"></span></span>
+          <span class="mini-value">67</span>
+        </div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Deploy</span>
+          <span class="mini-track"><span class="mini-fill" style="width:0%;"></span></span>
+          <span class="mini-value">0</span>
+        </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-head">
+            <a href="https://github.com/lifeos-plus/lifeos-cli">lifeos-plus/lifeos-cli</a>
+            <span class="pill" style="background:#d03b3b;" title="Weak fit">0%</span>
+          </div>
+          <div class="compare-meta">11★ &middot; Apache-2.0 &middot; 2026-08-13</div>
+          <div class="compare-found-via">whole-project search</div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Verified</span>
+          <span class="mini-track"><span class="mini-fill" style="width:67%;"></span></span>
+          <span class="mini-value">67</span>
+        </div>
+          
+        <div class="mini-row">
+          <span class="mini-label">Deploy</span>
+          <span class="mini-track"><span class="mini-fill" style="width:0%;"></span></span>
+          <span class="mini-value">0</span>
+        </div>
+        </div></div>
+    
+    <details class="disclosure">
+      <summary>Full evidence table &amp; raw data — every requirement, every repo</summary>
+      
+    <div class="table-scroll">
+      <table class="grid-table">
+        <thead><tr><th></th><th>local-first flat markdown file storage</th><th>minimalist markdown editor UI</th><th>local on-device AI embeddings</th><th>automatic semantic note clustering</th><th>semantic tag suggestion</th></tr></thead>
+        <tbody><tr><th>your-papa/obsidian-Smart2Brain</th><td><span class="pill" style="background:#0ca30c;" title="Obsidian plugin operating directly on your vault&#x27;s flat markdown notes — &quot;It can directly access and process your notes&quot;">✓ Present</span></td><td><span class="pill" style="background:#fab219;" title="Inherits Obsidian&#x27;s own editor (the plugin adds a chat sidebar, not its own editor) — reasonably clean but not marketed as minimalist specifically">~ Partial</span></td><td><span class="pill" style="background:#0ca30c;" title="&quot;All your notes will be embedded into vectors and then retrieved based on the similarity to your query&quot;; runs via Ollama, &quot;operate completely offline&quot;">✓ Present</span></td><td><span class="pill" style="background:#fab219;" title="RAG pipeline retrieves notes by embedding similarity for chat/Q&amp;A — real semantic retrieval infrastructure, but query-driven (&quot;chat with your notes&quot;), not a standing auto-grouped view">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="No tagging feature — it&#x27;s a Q&amp;A/chat interface over your notes, not a tag suggester">– Missing</span></td></tr><tr><th>YishenTu/claudian</th><td><span class="pill" style="background:#0ca30c;" title="Obsidian vault plugin — operates on flat markdown notes">✓ Present</span></td><td><span class="pill" style="background:#fab219;" title="Inherits Obsidian&#x27;s editor; plugin itself adds an AI-collaborator panel, not an editor">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="Embeds Claude Code/Codex (cloud LLM APIs) as an agentic collaborator — no local embedding model, no vector search">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Gives an AI agent file read/write/bash access to the vault; not embedding-based clustering">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td></tr><tr><th>iwe-org/iwe</th><td><span class="pill" style="background:#0ca30c;" title="&quot;Your notes are .md files in a local directory... No cloud, no database, no lock-in.&quot;">✓ Present</span></td><td><span class="pill" style="background:#fab219;" title="Not an editor itself — an LSP that adds IDE features (search, refactor, rename) to VS Code/Neovim/Zed/Helix; no standalone editor UI">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="&quot;IWE itself has no built-in AI&quot;; explicitly does &quot;retrieval by structure, not similarity guessing&quot; — the opposite approach from embeddings">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Organizes via explicit links the user creates, not automatic semantic similarity detection">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td></tr><tr><th>SourcewareLab/Toney</th><td><span class="pill" style="background:#0ca30c;" title="&quot;File Management – Easily navigate, open, and manage markdown files&quot;">✓ Present</span></td><td><span class="pill" style="background:#fab219;" title="&quot;fast, lightweight, terminal-based note-taking app&quot; with markdown rendering — minimalist but TUI, not a GUI editor">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td></tr><tr><th>Momoyu404/geminese</th><td><span class="pill" style="background:#0ca30c;" title="Obsidian vault plugin — operates on flat markdown notes">✓ Present</span></td><td><span class="pill" style="background:#fab219;" title="Inherits Obsidian&#x27;s editor">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="Embeds Gemini CLI (cloud) as an agentic collaborator with file/bash access — no local embeddings">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td></tr><tr><th>KeloYuan/Niki-AI</th><td><span class="pill" style="background:#0ca30c;" title="Obsidian vault plugin — operates on flat markdown notes">✓ Present</span></td><td><span class="pill" style="background:#fab219;" title="Inherits Obsidian&#x27;s editor">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="Embeds Claude Code as a writing companion (cloud LLM) — no local embeddings/vector search">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td></tr><tr><th>tomboy-notes/tomboy-ng</th><td><span class="pill" style="background:#fab219;" title="&quot;Import and export (plain text, RFT, MarkDown)&quot; — markdown is a bridge format, not confirmed as native storage">~ Partial</span></td><td><span class="pill" style="background:#fab219;" title="&quot;rich text markup&quot; note editor — closer to Tomboy&#x27;s WYSIWYG style than a plain markdown editor">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Has &quot;automatic linking between notes&quot; but by exact title match, not semantic similarity">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td></tr><tr><th>intrepidkarthi/dailyvox</th><td><span class="pill" style="background:#898781;" title="Voice journal storing structured entries (Core Data), not flat markdown files">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Voice-input journal, not a markdown editor">– Missing</span></td><td><span class="pill" style="background:#fab219;" title="&quot;100% on-device&quot; AI with Apple NaturalLanguage framework and a &quot;Digital Twin&quot; — real on-device AI, but for voice/mood analysis, not note-embedding search">~ Partial</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td></tr><tr><th>tehtbl/awesome-note-taking</th><td><span class="pill" style="background:#898781;" title="A curated list, not an application — included as a candidate for its links, not as a usable tool itself">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td></tr><tr><th>lifeos-plus/lifeos-cli</th><td><span class="pill" style="background:#898781;" title="SQLite/PostgreSQL-backed note records, not flat .md files">– Missing</span></td><td><span class="pill" style="background:#898781;" title="A broad life-management CLI covering tasks/habits/finance, not a focused notes editor">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="">– Missing</span></td><td><span class="pill" style="background:#898781;" title="Manual tag records only">– Missing</span></td></tr></tbody>
+      </table>
+    </div>
+      
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr><th>Repo</th><th class="num">Stars</th><th>License</th><th>Last commit</th>
+              <th class="num">Verified</th><th class="num">Deployability</th><th class="num">Coverage</th></tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td><a href="https://github.com/your-papa/obsidian-Smart2Brain">your-papa/obsidian-Smart2Brain</a></td>
+          <td class="num">1212</td>
+          <td>MIT</td>
+          <td>2026-08-12</td>
+          <td class="num">100.0</td>
+          <td class="num">0.0</td>
+          <td class="num">60%</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/YishenTu/claudian">YishenTu/claudian</a></td>
+          <td class="num">14746</td>
+          <td>MIT</td>
+          <td>2026-08-12</td>
+          <td class="num">100.0</td>
+          <td class="num">0.0</td>
+          <td class="num">30%</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/iwe-org/iwe">iwe-org/iwe</a></td>
+          <td class="num">1394</td>
+          <td>Apache-2.0</td>
+          <td>2026-08-12</td>
+          <td class="num">100.0</td>
+          <td class="num">0.0</td>
+          <td class="num">30%</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/SourcewareLab/Toney">SourcewareLab/Toney</a></td>
+          <td class="num">201</td>
+          <td>MIT</td>
+          <td>2026-05-27</td>
+          <td class="num">66.7</td>
+          <td class="num">0.0</td>
+          <td class="num">30%</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/Momoyu404/geminese">Momoyu404/geminese</a></td>
+          <td class="num">57</td>
+          <td>MIT</td>
+          <td>2026-03-29</td>
+          <td class="num">66.7</td>
+          <td class="num">0.0</td>
+          <td class="num">30%</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/KeloYuan/Niki-AI">KeloYuan/Niki-AI</a></td>
+          <td class="num">54</td>
+          <td>MIT</td>
+          <td>2026-05-22</td>
+          <td class="num">33.3</td>
+          <td class="num">0.0</td>
+          <td class="num">30%</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/tomboy-notes/tomboy-ng">tomboy-notes/tomboy-ng</a></td>
+          <td class="num">446</td>
+          <td>MIT</td>
+          <td>2026-08-02</td>
+          <td class="num">66.7</td>
+          <td class="num">0.0</td>
+          <td class="num">20%</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/intrepidkarthi/dailyvox">intrepidkarthi/dailyvox</a></td>
+          <td class="num">14</td>
+          <td>MIT</td>
+          <td>2026-08-13</td>
+          <td class="num">66.7</td>
+          <td class="num">0.0</td>
+          <td class="num">10%</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/tehtbl/awesome-note-taking">tehtbl/awesome-note-taking</a></td>
+          <td class="num">939</td>
+          <td>CC0-1.0</td>
+          <td>2026-04-20</td>
+          <td class="num">66.7</td>
+          <td class="num">0.0</td>
+          <td class="num">0%</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/lifeos-plus/lifeos-cli">lifeos-plus/lifeos-cli</a></td>
+          <td class="num">11</td>
+          <td>Apache-2.0</td>
+          <td>2026-08-13</td>
+          <td class="num">66.7</td>
+          <td class="num">0.0</td>
+          <td class="num">0%</td>
+        </tr></tbody>
+      </table>
+    </div>
+    </details>
+    <footer>Generated by RepoBridge from real GitHub data — see the matching .md report for full source citations.</footer>
+  </div>
+</body>
+</html>

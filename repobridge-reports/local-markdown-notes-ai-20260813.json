@@ -1,0 +1,188 @@
+{
+  "idea": "local-first markdown note-taking app with a minimalist editor and local AI embeddings for semantic clustering and tag suggestion",
+  "requirements": ["local-first flat markdown file storage", "minimalist markdown editor UI", "local on-device AI embeddings", "automatic semantic note clustering", "semantic tag suggestion"],
+  "generated_at": "2026-08-13T00:00:00Z",
+  "pick_rationale": "Close, but no strong match. Tier 1 (whole-project search) topped out at 30% — iwe and Toney both handle flat-markdown storage well but neither has any embedding-based AI. Tier 2 (searching the Obsidian/Logseq plugin ecosystem specifically) found obsidian-Smart2Brain, which genuinely does what was asked: it embeds your vault's notes into vectors via Ollama and runs entirely offline, doubling coverage to 60%. What it doesn't have is a standing auto-clustering view (its embeddings power a chat/Q&A interface, not a passive 'related notes' grouping) or tag suggestion at all. The other three Tier 2 finds (claudian, Niki-AI, geminese) looked promising by name but all embed a cloud coding-agent CLI as a vault collaborator, not local embeddings — a real false-positive pattern worth naming: 'AI plugin for Obsidian' surfaces agentic-coding-assistant plugins at least as often as semantic-search plugins. Combining candidates doesn't help further — nothing else contributes a capability Smart2Brain lacks, so composition caps at the same 60%. This is a genuine near-miss: building on Smart2Brain's embedding pipeline and adding a clustering view + tag suggestion on top is a much smaller lift than building the embedding infrastructure from scratch, even though it doesn't clear the 70% bar for an unqualified single-pick recommendation.",
+  "repos": [
+    {
+      "full_name": "your-papa/obsidian-Smart2Brain",
+      "url": "https://github.com/your-papa/obsidian-Smart2Brain",
+      "stars": 1212,
+      "license_spdx": "MIT",
+      "pushed_at": "2026-08-12T19:59:00Z",
+      "verified_score": 100.0,
+      "deployability_score": 0.0,
+      "coverage_pct": 60.0,
+      "found_via": "component search: obsidian/logseq semantic AI plugin",
+      "requirement_status": {
+        "local-first flat markdown file storage": {"status": "present", "evidence": "Obsidian plugin operating directly on your vault's flat markdown notes — \"It can directly access and process your notes\""},
+        "minimalist markdown editor UI": {"status": "partial", "evidence": "Inherits Obsidian's own editor (the plugin adds a chat sidebar, not its own editor) — reasonably clean but not marketed as minimalist specifically"},
+        "local on-device AI embeddings": {"status": "present", "evidence": "\"All your notes will be embedded into vectors and then retrieved based on the similarity to your query\"; runs via Ollama, \"operate completely offline\""},
+        "automatic semantic note clustering": {"status": "partial", "evidence": "RAG pipeline retrieves notes by embedding similarity for chat/Q&A — real semantic retrieval infrastructure, but query-driven (\"chat with your notes\"), not a standing auto-grouped view"},
+        "semantic tag suggestion": {"status": "missing", "evidence": "No tagging feature — it's a Q&A/chat interface over your notes, not a tag suggester"}
+      }
+    },
+    {
+      "full_name": "YishenTu/claudian",
+      "url": "https://github.com/YishenTu/claudian",
+      "stars": 14746,
+      "license_spdx": "MIT",
+      "pushed_at": "2026-08-12T18:19:25Z",
+      "verified_score": 100.0,
+      "deployability_score": 0.0,
+      "coverage_pct": 30.0,
+      "found_via": "component search: obsidian/logseq semantic AI plugin",
+      "requirement_status": {
+        "local-first flat markdown file storage": {"status": "present", "evidence": "Obsidian vault plugin — operates on flat markdown notes"},
+        "minimalist markdown editor UI": {"status": "partial", "evidence": "Inherits Obsidian's editor; plugin itself adds an AI-collaborator panel, not an editor"},
+        "local on-device AI embeddings": {"status": "missing", "evidence": "Embeds Claude Code/Codex (cloud LLM APIs) as an agentic collaborator — no local embedding model, no vector search"},
+        "automatic semantic note clustering": {"status": "missing", "evidence": "Gives an AI agent file read/write/bash access to the vault; not embedding-based clustering"},
+        "semantic tag suggestion": {"status": "missing", "evidence": ""}
+      }
+    },
+    {
+      "full_name": "iwe-org/iwe",
+      "url": "https://github.com/iwe-org/iwe",
+      "stars": 1394,
+      "license_spdx": "Apache-2.0",
+      "pushed_at": "2026-08-12T22:51:28Z",
+      "verified_score": 100.0,
+      "deployability_score": 0.0,
+      "coverage_pct": 30.0,
+      "found_via": "whole-project search",
+      "requirement_status": {
+        "local-first flat markdown file storage": {"status": "present", "evidence": "\"Your notes are .md files in a local directory... No cloud, no database, no lock-in.\""},
+        "minimalist markdown editor UI": {"status": "partial", "evidence": "Not an editor itself — an LSP that adds IDE features (search, refactor, rename) to VS Code/Neovim/Zed/Helix; no standalone editor UI"},
+        "local on-device AI embeddings": {"status": "missing", "evidence": "\"IWE itself has no built-in AI\"; explicitly does \"retrieval by structure, not similarity guessing\" — the opposite approach from embeddings"},
+        "automatic semantic note clustering": {"status": "missing", "evidence": "Organizes via explicit links the user creates, not automatic semantic similarity detection"},
+        "semantic tag suggestion": {"status": "missing", "evidence": ""}
+      }
+    },
+    {
+      "full_name": "SourcewareLab/Toney",
+      "url": "https://github.com/SourcewareLab/Toney",
+      "stars": 201,
+      "license_spdx": "MIT",
+      "pushed_at": "2026-05-27T06:13:16Z",
+      "verified_score": 66.7,
+      "deployability_score": 0.0,
+      "coverage_pct": 30.0,
+      "found_via": "whole-project search",
+      "requirement_status": {
+        "local-first flat markdown file storage": {"status": "present", "evidence": "\"File Management – Easily navigate, open, and manage markdown files\""},
+        "minimalist markdown editor UI": {"status": "partial", "evidence": "\"fast, lightweight, terminal-based note-taking app\" with markdown rendering — minimalist but TUI, not a GUI editor"},
+        "local on-device AI embeddings": {"status": "missing", "evidence": ""},
+        "automatic semantic note clustering": {"status": "missing", "evidence": ""},
+        "semantic tag suggestion": {"status": "missing", "evidence": ""}
+      }
+    },
+    {
+      "full_name": "Momoyu404/geminese",
+      "url": "https://github.com/Momoyu404/geminese",
+      "stars": 57,
+      "license_spdx": "MIT",
+      "pushed_at": "2026-03-29T01:17:58Z",
+      "verified_score": 66.7,
+      "deployability_score": 0.0,
+      "coverage_pct": 30.0,
+      "found_via": "component search: obsidian/logseq semantic AI plugin",
+      "requirement_status": {
+        "local-first flat markdown file storage": {"status": "present", "evidence": "Obsidian vault plugin — operates on flat markdown notes"},
+        "minimalist markdown editor UI": {"status": "partial", "evidence": "Inherits Obsidian's editor"},
+        "local on-device AI embeddings": {"status": "missing", "evidence": "Embeds Gemini CLI (cloud) as an agentic collaborator with file/bash access — no local embeddings"},
+        "automatic semantic note clustering": {"status": "missing", "evidence": ""},
+        "semantic tag suggestion": {"status": "missing", "evidence": ""}
+      }
+    },
+    {
+      "full_name": "KeloYuan/Niki-AI",
+      "url": "https://github.com/KeloYuan/Niki-AI",
+      "stars": 54,
+      "license_spdx": "MIT",
+      "pushed_at": "2026-05-22T04:04:28Z",
+      "verified_score": 33.3,
+      "deployability_score": 0.0,
+      "coverage_pct": 30.0,
+      "found_via": "component search: obsidian/logseq semantic AI plugin",
+      "requirement_status": {
+        "local-first flat markdown file storage": {"status": "present", "evidence": "Obsidian vault plugin — operates on flat markdown notes"},
+        "minimalist markdown editor UI": {"status": "partial", "evidence": "Inherits Obsidian's editor"},
+        "local on-device AI embeddings": {"status": "missing", "evidence": "Embeds Claude Code as a writing companion (cloud LLM) — no local embeddings/vector search"},
+        "automatic semantic note clustering": {"status": "missing", "evidence": ""},
+        "semantic tag suggestion": {"status": "missing", "evidence": ""}
+      }
+    },
+    {
+      "full_name": "tomboy-notes/tomboy-ng",
+      "url": "https://github.com/tomboy-notes/tomboy-ng",
+      "stars": 446,
+      "license_spdx": "MIT",
+      "pushed_at": "2026-08-02T11:39:52Z",
+      "verified_score": 66.7,
+      "deployability_score": 0.0,
+      "coverage_pct": 20.0,
+      "found_via": "whole-project search",
+      "requirement_status": {
+        "local-first flat markdown file storage": {"status": "partial", "evidence": "\"Import and export (plain text, RFT, MarkDown)\" — markdown is a bridge format, not confirmed as native storage"},
+        "minimalist markdown editor UI": {"status": "partial", "evidence": "\"rich text markup\" note editor — closer to Tomboy's WYSIWYG style than a plain markdown editor"},
+        "local on-device AI embeddings": {"status": "missing", "evidence": ""},
+        "automatic semantic note clustering": {"status": "missing", "evidence": "Has \"automatic linking between notes\" but by exact title match, not semantic similarity"},
+        "semantic tag suggestion": {"status": "missing", "evidence": ""}
+      }
+    },
+    {
+      "full_name": "intrepidkarthi/dailyvox",
+      "url": "https://github.com/intrepidkarthi/dailyvox",
+      "stars": 14,
+      "license_spdx": "MIT",
+      "pushed_at": "2026-08-13T08:03:27Z",
+      "verified_score": 66.7,
+      "deployability_score": 0.0,
+      "coverage_pct": 10.0,
+      "found_via": "whole-project search",
+      "requirement_status": {
+        "local-first flat markdown file storage": {"status": "missing", "evidence": "Voice journal storing structured entries (Core Data), not flat markdown files"},
+        "minimalist markdown editor UI": {"status": "missing", "evidence": "Voice-input journal, not a markdown editor"},
+        "local on-device AI embeddings": {"status": "partial", "evidence": "\"100% on-device\" AI with Apple NaturalLanguage framework and a \"Digital Twin\" — real on-device AI, but for voice/mood analysis, not note-embedding search"},
+        "automatic semantic note clustering": {"status": "missing", "evidence": ""},
+        "semantic tag suggestion": {"status": "missing", "evidence": ""}
+      }
+    },
+    {
+      "full_name": "tehtbl/awesome-note-taking",
+      "url": "https://github.com/tehtbl/awesome-note-taking",
+      "stars": 939,
+      "license_spdx": "CC0-1.0",
+      "pushed_at": "2026-04-20T10:32:20Z",
+      "verified_score": 66.7,
+      "deployability_score": 0.0,
+      "coverage_pct": 0.0,
+      "found_via": "whole-project search",
+      "requirement_status": {
+        "local-first flat markdown file storage": {"status": "missing", "evidence": "A curated list, not an application — included as a candidate for its links, not as a usable tool itself"},
+        "minimalist markdown editor UI": {"status": "missing", "evidence": ""},
+        "local on-device AI embeddings": {"status": "missing", "evidence": ""},
+        "automatic semantic note clustering": {"status": "missing", "evidence": ""},
+        "semantic tag suggestion": {"status": "missing", "evidence": ""}
+      }
+    },
+    {
+      "full_name": "lifeos-plus/lifeos-cli",
+      "url": "https://github.com/lifeos-plus/lifeos-cli",
+      "stars": 11,
+      "license_spdx": "Apache-2.0",
+      "pushed_at": "2026-08-13T07:23:34Z",
+      "verified_score": 66.7,
+      "deployability_score": 0.0,
+      "coverage_pct": 0.0,
+      "found_via": "whole-project search",
+      "requirement_status": {
+        "local-first flat markdown file storage": {"status": "missing", "evidence": "SQLite/PostgreSQL-backed note records, not flat .md files"},
+        "minimalist markdown editor UI": {"status": "missing", "evidence": "A broad life-management CLI covering tasks/habits/finance, not a focused notes editor"},
+        "local on-device AI embeddings": {"status": "missing", "evidence": ""},
+        "automatic semantic note clustering": {"status": "missing", "evidence": ""},
+        "semantic tag suggestion": {"status": "missing", "evidence": "Manual tag records only"}
+      }
+    }
+  ]
+}
