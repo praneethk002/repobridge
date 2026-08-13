@@ -89,6 +89,14 @@
   .hero-name a { color: var(--text-primary); text-decoration: none; }
   .hero-name a:hover { text-decoration: underline; }
   .hero-rationale { color: var(--text-secondary); font-size: 0.98rem; max-width: 60ch; margin: 0 0 22px; }
+  .hero-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+  .hero-chip {
+    display: inline-block; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 6px 16px; font-size: 1.05rem; font-weight: 600;
+    color: var(--text-primary); text-decoration: none;
+  }
+  .hero-chip:hover { text-decoration: underline; }
+  .checklist-via { color: var(--accent); font-size: 0.72rem; }
   .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--border); border-radius: 12px; overflow: hidden; }
   .stat-tile { background: var(--surface-2); padding: 16px 14px; }
   .stat-value { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -187,6 +195,7 @@
           <div class="stat-sublabel">~70% vs. building from scratch</div>
         </div></div>
       <p class="methodology">Estimate, not a measurement: 8h per missing feature, 3h per partial one; token savings assume ~15,000 tokens to generate one feature from scratch, at half that for a partial. Actual time and token cost depend heavily on your stack and the specific features.</p>
+      
     </section>
     <div class="split">
       

@@ -5,7 +5,7 @@ Open the generated file directly in a browser.
 
 Accepts two input shapes:
   - a dict with "idea"/"requirements"/"repos" (the SKILL.md sidecar) ->
-    full dashboard: hero card for the best pick, headline stats, a
+    full dashboard: hero card for the pick, headline stats, a
     checklist + runner-up split, and a compare-card grid for every
     candidate, with the exhaustive evidence table folded into a
     <details> disclosure so the page stays scannable without hiding data
@@ -13,12 +13,21 @@ Accepts two input shapes:
     -> compare cards only, no hero (nothing to crown as "best")
 
 `repos` is expected pre-sorted best-first — this script does not re-rank;
-the winner is whichever repo Claude put first in Step 5 of SKILL.md.
+ranking is whatever order Claude put them in during Step 4 of SKILL.md.
 
---print-stats prints the same headline numbers the hero card shows, as
-JSON, without writing HTML — SKILL.md uses this so the numbers in the
-markdown report and the dashboard can never drift apart (one formula,
-read twice, not recomputed by hand in two places).
+The "pick" itself has three possible modes, decided by compute_pick() —
+a fixed coverage-threshold rule, never an LLM judgment call:
+  - "single": the best repo alone clears SINGLE_REPO_THRESHOLD.
+  - "composition": no single repo does, but the top few together clear
+    it with a real margin — the requirement-by-requirement attribution
+    is derived mechanically here, never hand-written by Claude.
+  - "custom_build": nothing clears the bar, alone or combined — said
+    plainly rather than forcing a pick that doesn't exist.
+
+--print-stats prints compute_pick()'s output (mode included) as JSON,
+without writing HTML — SKILL.md reads the mode from this to decide what
+to write next, and the markdown report and dashboard can never drift
+apart (one formula, read twice, not recomputed by hand in two places).
 """
 
 import argparse
@@ -38,6 +47,12 @@ HOURS_PER_PARTIAL_FEATURE = 3   # finishing something already scaffolded costs l
 HOURS_PER_DAY = 6               # focused dev hours/day, for the days conversion
 TOKENS_PER_FEATURE = 15_000     # rough LLM tokens (incl. iteration) to generate one feature from scratch
 PARTIAL_TOKEN_FRACTION = 0.5    # a partial feature needs roughly half that generation work
+
+# Pick-mode thresholds. All three modes are derived mechanically from
+# coverage already in the sidecar — never decided by Claude free-hand.
+SINGLE_REPO_THRESHOLD = 70       # reuses coverage_bucket()'s "Strong fit" cutoff
+COMPOSITION_CANDIDATE_LIMIT = 3  # stitching more than 3 repos isn't a practical recommendation
+COMPOSITION_MARGIN = 10          # joint coverage must beat the single best by this much to be worth the added complexity
 
 
 def load_data(path):
@@ -68,30 +83,22 @@ def coverage_bucket(pct):
     return "Weak fit", CRITICAL
 
 
-def compute_headline_stats(data):
-    repos = data.get("repos", [])
-    requirements = data.get("requirements", [])
-    if not repos or not requirements:
-        return None
+def _status_counts(statuses, requirements):
+    present = sum(1 for r in requirements if statuses.get(r, {}).get("status") == "present")
+    partial = sum(1 for r in requirements if statuses.get(r, {}).get("status") == "partial")
+    missing = len(requirements) - present - partial
+    return present, partial, missing
 
-    best = repos[0]
-    statuses = best.get("requirement_status")
-    if not statuses:
-        return None
 
-    missing = sum(1 for s in statuses.values() if s.get("status") == "missing")
-    partial = sum(1 for s in statuses.values() if s.get("status") == "partial")
-    present = sum(1 for s in statuses.values() if s.get("status") == "present")
-    total = len(requirements)
-
+def _stat_fields(present, partial, missing, total):
     hours = missing * HOURS_PER_MISSING_FEATURE + partial * HOURS_PER_PARTIAL_FEATURE
     tokens_full_build = total * TOKENS_PER_FEATURE
     tokens_remaining = (missing + partial * PARTIAL_TOKEN_FRACTION) * TOKENS_PER_FEATURE
     tokens_saved = max(0, tokens_full_build - tokens_remaining)
+    match_pct = (present + partial * 0.5) / total * 100 if total else 0.0
 
     return {
-        "best_pick": best["full_name"],
-        "match_pct": best.get("coverage_pct", 0.0),
+        "match_pct": round(match_pct, 1),
         "features_present": present,
         "features_partial": partial,
         "features_missing": missing,
@@ -110,6 +117,67 @@ def compute_headline_stats(data):
     }
 
 
+def compute_joint_requirement_status(repos, requirements, limit=COMPOSITION_CANDIDATE_LIMIT):
+    """For each requirement, the best status found among the top `limit`
+    repos (present > partial > missing), attributed to whichever repo
+    provided it. This is the entire "composition" — mechanically derived,
+    never hand-written by Claude."""
+    rank = {"present": 2, "partial": 1, "missing": 0}
+    candidates = repos[:limit]
+    composition = []
+    for req in requirements:
+        best_repo, best_status, best_evidence = None, "missing", ""
+        for r in candidates:
+            entry = r.get("requirement_status", {}).get(req, {"status": "missing", "evidence": ""})
+            status = entry.get("status", "missing")
+            if rank[status] > rank[best_status]:
+                best_repo, best_status = r["full_name"], status
+                best_evidence = entry.get("evidence", "")
+        composition.append({
+            "requirement": req, "full_name": best_repo,
+            "status": best_status, "evidence": best_evidence,
+        })
+    return composition
+
+
+def compute_pick(data):
+    repos = data.get("repos", [])
+    requirements = data.get("requirements", [])
+    if not repos or not requirements or not repos[0].get("requirement_status"):
+        return None
+
+    best = repos[0]
+    best_stats = _stat_fields(*_status_counts(best.get("requirement_status", {}), requirements), len(requirements))
+
+    if best_stats["match_pct"] >= SINGLE_REPO_THRESHOLD:
+        return {**best_stats, "mode": "single", "best_pick": best["full_name"]}
+
+    composition = compute_joint_requirement_status(repos, requirements)
+    comp_counts = (
+        sum(1 for c in composition if c["status"] == "present"),
+        sum(1 for c in composition if c["status"] == "partial"),
+        sum(1 for c in composition if c["status"] == "missing"),
+    )
+    comp_stats = _stat_fields(*comp_counts, len(requirements))
+
+    if (comp_stats["match_pct"] >= SINGLE_REPO_THRESHOLD
+            and comp_stats["match_pct"] - best_stats["match_pct"] >= COMPOSITION_MARGIN):
+        contributing = []
+        for c in composition:
+            if c["full_name"] and c["full_name"] not in contributing:
+                contributing.append(c["full_name"])
+        return {**comp_stats, "mode": "composition", "composition": composition, "contributing_repos": contributing}
+
+    return {
+        **best_stats, "mode": "custom_build", "closest_repo": best["full_name"],
+        "note": (
+            f"No single repo or small combination clears a strong-fit bar (≥{SINGLE_REPO_THRESHOLD}%) "
+            "for this idea — most of it will need custom building. Numbers above are relative to the "
+            "closest reference found, not a recommended pick."
+        ),
+    }
+
+
 def stat_tile(label, value, sublabel=""):
     return f"""
         <div class="stat-tile">
@@ -121,9 +189,29 @@ def stat_tile(label, value, sublabel=""):
 
 def hero_section(data, stats):
     repos = data.get("repos", [])
-    best = repos[0]
+    mode = stats["mode"]
     rationale = data.get("pick_rationale")
     match_pct = stats["match_pct"]
+
+    if mode == "single":
+        best = repos[0]
+        kicker = "Best match"
+        title_block = f'<h2 class="hero-name"><a href="{esc(best.get("url", "#"))}">{esc(best["full_name"])}</a></h2>'
+    elif mode == "composition":
+        url_by_name = {r["full_name"]: r.get("url", "#") for r in repos}
+        chips = "".join(
+            f'<a class="hero-chip" href="{esc(url_by_name.get(name, "#"))}">{esc(name)}</a>'
+            for name in stats["contributing_repos"]
+        )
+        kicker = "Composed pick"
+        title_block = f'<div class="hero-chips">{chips}</div>'
+    else:
+        closest = repos[0]
+        kicker = "No strong match"
+        title_block = (
+            f'<h2 class="hero-name">Closest reference: '
+            f'<a href="{esc(closest.get("url", "#"))}">{esc(closest["full_name"])}</a></h2>'
+        )
 
     tiles = "".join([
         stat_tile("Match", f"{match_pct:.0f}%"),
@@ -137,11 +225,12 @@ def hero_section(data, stats):
 
     return f"""
     <section class="hero">
-      <div class="hero-kicker">Best match</div>
-      <h2 class="hero-name"><a href="{esc(best.get('url', '#'))}">{esc(best['full_name'])}</a></h2>
+      <div class="hero-kicker">{esc(kicker)}</div>
+      {title_block}
       {f'<p class="hero-rationale">{esc(rationale)}</p>' if rationale else ''}
       <div class="stat-grid">{tiles}</div>
       <p class="methodology">{esc(stats["methodology_note"])}</p>
+      {f'<p class="methodology">{esc(stats["note"])}</p>' if stats.get("note") else ''}
     </section>"""
 
 
@@ -170,8 +259,32 @@ def winner_checklist(best, requirements):
     </div>"""
 
 
-def runner_up_list(repos):
-    others = repos[1:]
+def composition_checklist(composition):
+    icon_style = {
+        "present": (GOOD, "✓"),
+        "partial": (WARNING, "~"),
+        "missing": (MUTED, "–"),
+    }
+    rows = []
+    for entry in composition:
+        color, icon = icon_style.get(entry["status"], icon_style["missing"])
+        evidence = entry.get("evidence", "")
+        via = f' <span class="checklist-via">via {esc(entry["full_name"])}</span>' if entry.get("full_name") else ""
+        rows.append(f"""
+        <div class="checklist-row">
+          <span class="checklist-icon" style="background:{color};">{icon}</span>
+          <span class="checklist-req">{esc(entry['requirement'])}</span>
+          <span class="checklist-evidence">{esc(evidence) if evidence else '<em>Not covered</em>'}{via}</span>
+        </div>""")
+    return f"""
+    <div class="panel panel-half">
+      <h3>How the pieces fit</h3>
+      {"".join(rows)}
+    </div>"""
+
+
+def runner_up_list(repos, exclude_names):
+    others = [r for r in repos if r["full_name"] not in exclude_names]
     if not others:
         return ""
     rows = []
@@ -296,16 +409,22 @@ def render_page(data):
     repos = data.get("repos", [])
     idea = data.get("idea")
     requirements = data.get("requirements", [])
-    stats = compute_headline_stats(data)
+    stats = compute_pick(data)
 
     title = f"RepoBridge: {esc(idea)}" if idea else "RepoBridge dashboard"
 
     top_sections = ""
     if stats:
+        if stats["mode"] == "composition":
+            left = composition_checklist(stats["composition"])
+            exclude = set(stats["contributing_repos"])
+        else:
+            left = winner_checklist(repos[0], requirements)
+            exclude = {repos[0]["full_name"]}
         top_sections = hero_section(data, stats) + f"""
     <div class="split">
-      {winner_checklist(repos[0], requirements)}
-      {runner_up_list(repos)}
+      {left}
+      {runner_up_list(repos, exclude)}
     </div>"""
 
     return f"""<!doctype html>
@@ -399,6 +518,14 @@ def render_page(data):
   .hero-name a {{ color: var(--text-primary); text-decoration: none; }}
   .hero-name a:hover {{ text-decoration: underline; }}
   .hero-rationale {{ color: var(--text-secondary); font-size: 0.98rem; max-width: 60ch; margin: 0 0 22px; }}
+  .hero-chips {{ display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }}
+  .hero-chip {{
+    display: inline-block; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 6px 16px; font-size: 1.05rem; font-weight: 600;
+    color: var(--text-primary); text-decoration: none;
+  }}
+  .hero-chip:hover {{ text-decoration: underline; }}
+  .checklist-via {{ color: var(--accent); font-size: 0.72rem; }}
   .stat-grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--border); border-radius: 12px; overflow: hidden; }}
   .stat-tile {{ background: var(--surface-2); padding: 16px 14px; }}
   .stat-value {{ font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }}
@@ -490,7 +617,7 @@ def main():
     data = load_data(args.input)
 
     if args.print_stats:
-        stats = compute_headline_stats(data)
+        stats = compute_pick(data)
         if stats is None:
             print("error: no coverage/requirement data in this file — nothing to summarize", file=sys.stderr)
             sys.exit(1)

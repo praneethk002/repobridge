@@ -12,22 +12,26 @@ Generating code is now nearly free, so it's tempting to generate everything. Tha
 
 ```mermaid
 flowchart TD
-    A["/repobridge &lt;idea&gt;"] --> B["Claude decomposes the idea:<br/>search queries, topics, requirements list"]
-    B --> C["scout.py search<br/>(metadata only, no README fetches)"]
+    Z["/repobridge &lt;idea&gt;"] --> Z2["Step 0: Claude reflects the idea back,\nconfirms understanding — zero GitHub calls before this clears"]
+    Z2 --> A["Claude decomposes the idea:<br/>search queries, topics, requirements list"]
+    A --> C["scout.py search<br/>(metadata only, no README fetches)"]
     C --> D["Hard filters: license, staleness<br/>+ rule-based relevance score"]
     D --> E["Top 5-8 candidates"]
     E --> F["scout.py enrich<br/>(README + repo structure, this shortlist only)"]
     F --> G["Claude scores relevance as a<br/>strict evaluator, ranks best-first"]
-    G --> H["JSON sidecar (repos[0] = the pick)"]
-    H --> I["Markdown report"]
-    H --> J["dashboard.py --print-stats<br/>(match %, features left, time, tokens saved)"]
-    H --> K["dashboard.py<br/>static HTML dashboard"]
+    G --> H["JSON sidecar (no pick_rationale yet)"]
+    H --> M["dashboard.py --print-stats<br/>decides the pick mode: single / composition / custom_build"]
+    M --> H2["pick_rationale written to match the mode"]
+    H2 --> I["Markdown report"]
+    H2 --> K["dashboard.py<br/>static HTML dashboard"]
 ```
 
-Retrieval and scoring are deliberately split into two stages so the expensive work (fetching README text, checking for CI/Docker/deploy config) only ever runs against a handful of pre-filtered candidates, not every repo that shows up in a search. See [`docs/plan.md`](docs/plan.md) for the full design rationale, including two specific tradeoffs made on purpose:
+Retrieval and scoring are deliberately split into two stages so the expensive work (fetching README text, checking for CI/Docker/deploy config) only ever runs against a handful of pre-filtered candidates, not every repo that shows up in a search. See [`docs/plan.md`](docs/plan.md) for the full design rationale, including specific tradeoffs made on purpose:
 
 - **Copyleft licenses (GPL/AGPL) are hard-blocked by default.** A builder using this without a lawyer in the loop shouldn't be able to silently walk into a copyleft obligation on a closed-source project. Override with `--allow-copyleft` if you know what you're doing.
 - **The staleness cutoff is 12 months, not 6.** A stable, feature-complete repo can go months without a commit without being abandoned — a tighter cutoff would systematically exclude exactly the kind of "boring, finished" code this tool should prefer. Recency instead weights the *ranking*, not a hard gate.
+- **Step 0 is a real gate, not a formality.** Going straight from a one-line idea to search queries risks locking in a guessed interpretation before anyone can correct it. It's adaptive, not a forced wizard — a clear idea gets a one-turn reflect-and-confirm, not a multi-round interrogation.
+- **The pick mode is a fixed threshold, not an LLM judgment call.** See "The pick" below.
 
 ## Quickstart
 
@@ -41,7 +45,7 @@ No `pip install` — every script here is Python stdlib only, by design. No data
 /repobridge habit tracker with streaks and social accountability
 ```
 
-This runs inside Claude Code as a skill (`.claude/skills/repobridge/SKILL.md`) — Claude does the semantic reasoning (query generation, relevance judgment, gap analysis); the Python scripts do the deterministic, auditable parts (search, filter, score).
+This runs inside Claude Code as a skill (`.claude/skills/repobridge/SKILL.md`) — Claude does the semantic reasoning (query generation, relevance judgment, gap analysis); the Python scripts do the deterministic, auditable parts (search, filter, score, pick mode). First response is a plain-language reflection of the idea asking you to confirm it — nothing hits the GitHub API until you do.
 
 You can also drive the retrieval engine directly, without Claude, for debugging or scripting:
 
@@ -73,22 +77,30 @@ repobridge-reports/
   *.html          static dashboards generated from that data
 ```
 
-## The report
+## The pick
 
 Each run produces three artifacts for a given idea, all generated from one JSON sidecar so they can never disagree: a markdown report, the sidecar itself, and a static HTML dashboard.
 
-The dashboard leads with a single answer, not a list — one best-pick hero card, in the spirit of a clean dark-mode answer page: the repo, one to two sentences on *why* it won over the runner-up, and four headline numbers:
+The dashboard leads with a single answer, not a list — a hero card, in the spirit of a clean dark-mode answer page. What's *in* that hero card depends on a fixed coverage threshold (`dashboard.py`'s `compute_pick()`), never an LLM judgment call:
+
+| Mode | When | Hero shows |
+|---|---|---|
+| **single** | The best repo alone covers ≥70% of requirements | That repo, why it won over the runner-up |
+| **composition** | No repo clears 70% alone, but the top 3 together do, with a real margin | The 2-3 repos stitched together, which one covers which requirement (derived mechanically, never hand-assigned), and why combining them makes sense |
+| **custom_build** | Nothing clears 70%, alone or combined | Said plainly — the closest reference found, framed as a reference point, not a recommendation |
+
+Whichever mode applies, the hero also shows four headline numbers:
 
 | Stat | What it means |
 |---|---|
-| **Match %** | Present + half-credit Partial, as a share of the idea's stated requirements |
+| **Match %** | Present + half-credit Partial, as a share of the idea's stated requirements (joint coverage in composition mode) |
 | **Features left** | Count of Missing + Partial requirements for the pick |
 | **Est. time remaining** | Heuristic: hours per missing/partial feature, converted to days |
 | **Tokens saved** | Heuristic: tokens an LLM would spend generating the covered portion from scratch |
 
-The last two are explicitly estimates, not measurements — the fixed formula behind them (and its constants) lives in `dashboard.py`, and the page always shows the methodology note beside the numbers rather than presenting them as precise. `dashboard.py --print-stats` prints the same numbers as JSON so the markdown report states the identical figures instead of Claude re-deriving them by hand.
+The last two are explicitly estimates, not measurements — the fixed formula behind them (and its constants) lives in `dashboard.py`, and the page always shows the methodology note beside the numbers rather than presenting them as precise. `dashboard.py --print-stats` prints the same numbers (mode included) as JSON so the markdown report states the identical figures instead of Claude re-deriving them by hand.
 
-Below the hero, every artifact still shows the full comparison — stars, license, verified/deployability scores, and a Present/Partial/Missing grid for every candidate considered, each cell backed by a one-line evidence quote from the README. The single-answer framing up top never comes at the cost of the audit trail underneath it.
+Below the hero, every artifact still shows the full comparison — stars, license, verified/deployability scores, and a Present/Partial/Missing grid for every candidate considered, each cell backed by a one-line evidence quote from the README. The single-answer framing up top never comes at the cost of the audit trail underneath it, and it never depends on which mode won.
 
 A worked example, from a real (unmocked) run against the idea *"habit tracker with streaks and social accountability"*, is checked into `repobridge-reports/`. Its headline finding — none of the four real candidates found had any social-accountability feature — is exactly the kind of honest gap this tool exists to surface; it's not a cherry-picked success case.
 
@@ -108,6 +120,8 @@ python3 -m unittest discover -s tests -v
 - **All GitHub access goes through `scout.py`.** Claude never calls the API directly, so auth, filtering, and error-handling logic live in one place.
 - **No secrets in output.** The token is read from the environment and never echoed, including in error messages.
 - **Estimates are labeled as estimates.** Time-remaining and tokens-saved are heuristic, not measured — they always ship with the formula's methodology note, never as bare precise-looking numbers.
+- **The pick mode is never decided by hand.** Single vs. composition vs. custom-build, and the composition's requirement-to-repo attribution, always come from `dashboard.py --print-stats` — the same "don't let the LLM freehand arithmetic" rule applied to the newest part of the pipeline.
+- **The confirmation gate isn't skippable.** Even an idea that looks obviously clear still gets a one-turn reflect-and-confirm before any search query is built.
 
 ## What this deliberately doesn't do
 
