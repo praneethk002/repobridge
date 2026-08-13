@@ -1,5 +1,17 @@
 # RepoBridge Report: habit tracker with streaks and social accountability
 
+## The pick: redpangilinan/iotawise
+
+Highest requirement coverage of the four candidates (70%): real streak tracking, a working dashboard, and Google auth already in place. Verified active with 3+ contributors, though it lacks CI and still needs social features and finished push notifications.
+
+| Match | Features left | Est. time remaining | Tokens saved |
+|---|---|---|---|
+| 70% | 2 of 5 (1 missing, 1 partial) | ~1.8d (~11h) | ~52.5K (~70%) |
+
+*Estimate, not a measurement: 8h per missing feature, 3h per partial one; token savings assume ~15,000 tokens to generate one feature from scratch, at half that for a partial. Actual time and token cost depend heavily on your stack and the specific features.*
+
+---
+
 Idea requirements evaluated: streak tracking, social accountability, reminders, progress visualization, multi-user.
 
 4 candidates survived search + hard filters (license present and non-copyleft, pushed within 12 months, stars ≥ 50). All 4 are included below since fewer than 5 survived — none were cut for space.

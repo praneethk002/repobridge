@@ -56,29 +56,24 @@ For each enriched repo, read `readme_excerpt` and evaluate it against the requir
 - Most requirements on most repos should land Partial or Missing. A repo that scores Present across the board should be rare, and if one shows up, double-check it actually holds up rather than accepting it at face value.
 - Compute **coverage %** = (Present × 1 + Partial × 0.5) / total requirements.
 
-## Step 5 — Final ranking
+## Step 5 — Final ranking and the single best pick
 
-Combine your Step 4 relevance read with `repo['verified_score']` and `repo['deployability_score']` to pick the final **top 3-5**. This is a judgment call, not a re-sort by `metadata_score` — a repo that ranked #1 on stars/recency but covers little of the actual idea should not out-rank a smaller, better-fitting repo here.
+Combine your Step 4 relevance read with `repo['verified_score']` and `repo['deployability_score']` to rank the final **top 3-5**. This is a judgment call, not a re-sort by `metadata_score` — a repo that ranked #1 on stars/recency but covers little of the actual idea should not out-rank a smaller, better-fitting repo here.
+
+Whichever repo you rank #1 is **the pick** — the dashboard and report both lead with it as a single answer, with the rest shown as the comparison behind it. Write one or two sentences on *why* it's the pick (what tipped it over the runner-up, and its most consequential gap) — this becomes `pick_rationale` in the sidecar below. Don't hedge into "it depends" — if the evidence is genuinely too close to call, say that plainly instead of forcing a pick.
 
 ## Step 6 — Write the report, sidecar, and dashboard
 
 Create `repobridge-reports/` if it doesn't exist. Write `repobridge-reports/<slug>-<YYYYMMDD>.md`, where `<slug>` is the idea in kebab-case, truncated to ~40 chars.
 
-For each of the top 3-5 repos, include:
-
-- **Name, URL, stars, last commit date, license** (note explicitly if copyleft — `scout.py` already excludes copyleft by default, so this only applies if the user ran with `--allow-copyleft` semantics were overridden; otherwise omit the note)
-- **Verified rationale** — list the specific `verified_signals` that passed (e.g. "active in the last 12mo, 3+ contributors, has CI"), not a vibe-based claim
-- **Feature-map table** — requirements as rows, Present/Partial/Missing per repo, with the evidence quote
-- **Coverage %**
-- **Missing slice** — the concrete, named list of what's not covered, i.e. what a developer would actually need to build
-
-Alongside the markdown, write the same data as a JSON sidecar at `repobridge-reports/<slug>-<YYYYMMDD>.json`, matching this shape exactly (it feeds the dashboard, so the keys are load-bearing):
+Write the JSON sidecar **first** (`repobridge-reports/<slug>-<YYYYMMDD>.json`) — the markdown report is written from it, not the other way around, so the two can't disagree. Match this shape exactly (it feeds the dashboard, so the keys are load-bearing), with **`repos` ordered best-first** — `repos[0]` is read as the pick, not re-derived:
 
 ```json
 {
   "idea": "<the original idea text>",
   "requirements": ["<requirement 1>", "<requirement 2>", ...],
   "generated_at": "<ISO 8601 timestamp>",
+  "pick_rationale": "<1-2 sentences: why repos[0] over the runner-up, and its main gap>",
   "repos": [
     {
       "full_name": "owner/repo", "url": "...", "stars": 0,
@@ -93,15 +88,31 @@ Alongside the markdown, write the same data as a JSON sidecar at `repobridge-rep
 }
 ```
 
-Then generate the dashboard:
+Then pull the headline numbers instead of computing them by hand:
+
+```
+python3 .claude/skills/repobridge/dashboard.py repobridge-reports/<slug>-<YYYYMMDD>.json --print-stats
+```
+
+This prints `match_pct`, `features_left` (with the present/partial/missing breakdown), `estimated_hours_remaining`/`estimated_days_remaining`, `estimated_tokens_saved`/`estimated_tokens_saved_pct`, and a `methodology_note` — all derived from the sidecar you just wrote, by one fixed formula. Use these exact numbers in the markdown report's opening section (pick name, `pick_rationale`, then the four headline stats and the methodology note verbatim — these are estimates, and the report should say so as plainly as the dashboard does). Do not recompute or restate them differently than what this command prints.
+
+The rest of the markdown follows the existing detail format, for all top 3-5 repos:
+
+- **Name, URL, stars, last commit date, license** (note explicitly if copyleft — `scout.py` already excludes copyleft by default, so this only applies if the user ran with `--allow-copyleft` semantics were overridden; otherwise omit the note)
+- **Verified rationale** — list the specific `verified_signals` that passed (e.g. "active in the last 12mo, 3+ contributors, has CI"), not a vibe-based claim
+- **Feature-map table** — requirements as rows, Present/Partial/Missing per repo, with the evidence quote
+- **Coverage %**
+- **Missing slice** — the concrete, named list of what's not covered, i.e. what a developer would actually need to build
+
+Finally, generate the dashboard:
 
 ```
 python3 .claude/skills/repobridge/dashboard.py repobridge-reports/<slug>-<YYYYMMDD>.json
 ```
 
-This writes `repobridge-reports/<slug>-<YYYYMMDD>.html` — a static, self-contained file with no network calls at render time. Do not hand-write or skip this file; it's generated purely from the sidecar you already wrote, so it can never show data the report doesn't.
+This writes `repobridge-reports/<slug>-<YYYYMMDD>.html` — a static, self-contained file with no network calls at render time, leading with a hero card for the pick (headline stats + why) and the full comparison below it. Do not hand-write or skip this file; it's generated purely from the sidecar you already wrote, so it can never show data the report doesn't.
 
-After writing all three, summarize in chat: the top pick, why, and the three file paths (`.md`, `.json`, `.html`). Don't paste the full report inline — point to the files.
+After writing all three, summarize in chat: the pick, why, its headline stats, and the three file paths (`.md`, `.json`, `.html`). Don't paste the full report inline — point to the files.
 
 ## Guardrails
 
@@ -110,3 +121,4 @@ After writing all three, summarize in chat: the top pick, why, and the three fil
 - If `scout.py` reports a rate-limit or auth error, stop and surface it — don't retry in a loop.
 - This skill produces a report, not code. Do not clone repos or write application code as part of this skill.
 - The dashboard is always generated from the JSON sidecar via `dashboard.py`, never hand-written — that's what guarantees it can't show anything the report doesn't.
+- The time and token-savings figures are heuristic estimates from `dashboard.py --print-stats`, not measurements. Always carry the `methodology_note` alongside them — never present them as precise or committed.

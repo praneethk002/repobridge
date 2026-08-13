@@ -17,8 +17,11 @@ flowchart TD
     C --> D["Hard filters: license, staleness<br/>+ rule-based relevance score"]
     D --> E["Top 5-8 candidates"]
     E --> F["scout.py enrich<br/>(README + repo structure, this shortlist only)"]
-    F --> G["Claude scores relevance as a<br/>strict evaluator, per requirement"]
-    G --> H["Markdown report + JSON sidecar<br/>+ static HTML dashboard"]
+    F --> G["Claude scores relevance as a<br/>strict evaluator, ranks best-first"]
+    G --> H["JSON sidecar (repos[0] = the pick)"]
+    H --> I["Markdown report"]
+    H --> J["dashboard.py --print-stats<br/>(match %, features left, time, tokens saved)"]
+    H --> K["dashboard.py<br/>static HTML dashboard"]
 ```
 
 Retrieval and scoring are deliberately split into two stages so the expensive work (fetching README text, checking for CI/Docker/deploy config) only ever runs against a handful of pre-filtered candidates, not every repo that shows up in a search. See [`docs/plan.md`](docs/plan.md) for the full design rationale, including two specific tradeoffs made on purpose:
@@ -72,12 +75,20 @@ repobridge-reports/
 
 ## The report
 
-Each run produces three artifacts for a given idea: a markdown report, a JSON sidecar with the same data in structured form, and a static HTML dashboard generated from that sidecar. For each shortlisted repo, all three cover the same substance:
+Each run produces three artifacts for a given idea, all generated from one JSON sidecar so they can never disagree: a markdown report, the sidecar itself, and a static HTML dashboard.
 
-- Stars, license, last commit, and a **verified** rationale — the specific rule-based signals that passed (recent commit, 3+ contributors, CI present), not a vibe
-- A **deployability** score — Docker/compose config, a `.env.example`, a one-click deploy button — because for a lot of builders, getting a repo running at all is a bigger barrier than the code itself
-- A **Present / Partial / Missing** table, one row per requirement extracted from the idea, each with a one-line evidence quote from the README
-- A coverage percentage and an explicit list of what's still missing — the actual delta to build
+The dashboard leads with a single answer, not a list — one best-pick hero card, in the spirit of a clean dark-mode answer page: the repo, one to two sentences on *why* it won over the runner-up, and four headline numbers:
+
+| Stat | What it means |
+|---|---|
+| **Match %** | Present + half-credit Partial, as a share of the idea's stated requirements |
+| **Features left** | Count of Missing + Partial requirements for the pick |
+| **Est. time remaining** | Heuristic: hours per missing/partial feature, converted to days |
+| **Tokens saved** | Heuristic: tokens an LLM would spend generating the covered portion from scratch |
+
+The last two are explicitly estimates, not measurements — the fixed formula behind them (and its constants) lives in `dashboard.py`, and the page always shows the methodology note beside the numbers rather than presenting them as precise. `dashboard.py --print-stats` prints the same numbers as JSON so the markdown report states the identical figures instead of Claude re-deriving them by hand.
+
+Below the hero, every artifact still shows the full comparison — stars, license, verified/deployability scores, and a Present/Partial/Missing grid for every candidate considered, each cell backed by a one-line evidence quote from the README. The single-answer framing up top never comes at the cost of the audit trail underneath it.
 
 A worked example, from a real (unmocked) run against the idea *"habit tracker with streaks and social accountability"*, is checked into `repobridge-reports/`. Its headline finding — none of the four real candidates found had any social-accountability feature — is exactly the kind of honest gap this tool exists to surface; it's not a cherry-picked success case.
 
@@ -96,6 +107,7 @@ python3 -m unittest discover -s tests -v
 - **Deterministic scoring stays auditable.** Every score ships alongside the exact signals that produced it (`score_breakdown`, `verified_signals`, `deployability_signals`) — nothing is a hidden weighting.
 - **All GitHub access goes through `scout.py`.** Claude never calls the API directly, so auth, filtering, and error-handling logic live in one place.
 - **No secrets in output.** The token is read from the environment and never echoed, including in error messages.
+- **Estimates are labeled as estimates.** Time-remaining and tokens-saved are heuristic, not measured — they always ship with the formula's methodology note, never as bare precise-looking numbers.
 
 ## What this deliberately doesn't do
 

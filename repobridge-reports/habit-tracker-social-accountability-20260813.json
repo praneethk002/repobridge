@@ -2,6 +2,7 @@
   "idea": "habit tracker with streaks and social accountability",
   "requirements": ["streak tracking", "social accountability", "reminders", "progress visualization", "multi-user"],
   "generated_at": "2026-08-13T00:00:00Z",
+  "pick_rationale": "Highest requirement coverage of the four candidates (70%): real streak tracking, a working dashboard, and Google auth already in place. Verified active with 3+ contributors, though it lacks CI and still needs social features and finished push notifications.",
   "repos": [
     {
       "full_name": "redpangilinan/iotawise",

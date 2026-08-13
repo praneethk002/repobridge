@@ -6,193 +6,308 @@
 <title>RepoBridge: habit tracker with streaks and social accountability</title>
 <style>
   :root {
+    color-scheme: dark;
+    --bg: #0a0b0c;
+    --surface: #131517;
+    --surface-2: #1b1e21;
+    --text-primary: #f4f5f5;
+    --text-secondary: #a8adb3;
+    --muted: #6b7075;
+    --gridline: #24272b;
+    --border: rgba(255,255,255,0.08);
+    --accent: #3987e5;
+    --accent-soft: rgba(57,135,229,0.14);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg: #f9f9f7;
+      --surface: #ffffff;
+      --surface-2: #f3f3f1;
+      --text-primary: #0b0b0b;
+      --text-secondary: #52514e;
+      --muted: #898781;
+      --gridline: #e1e0d9;
+      --border: rgba(11,11,11,0.08);
+      --accent: #2a78d6;
+      --accent-soft: rgba(42,120,214,0.10);
+    }
+  }
+  :root[data-theme="light"] {
     color-scheme: light;
-    --surface: #fcfcfb;
-    --page: #f9f9f7;
+    --bg: #f9f9f7;
+    --surface: #ffffff;
+    --surface-2: #f3f3f1;
     --text-primary: #0b0b0b;
     --text-secondary: #52514e;
     --muted: #898781;
     --gridline: #e1e0d9;
-    --border: rgba(11,11,11,0.10);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      color-scheme: dark;
-      --surface: #1a1a19;
-      --page: #0d0d0d;
-      --text-primary: #ffffff;
-      --text-secondary: #c3c2b7;
-      --muted: #898781;
-      --gridline: #2c2c2a;
-      --border: rgba(255,255,255,0.10);
-    }
+    --border: rgba(11,11,11,0.08);
+    --accent: #2a78d6;
+    --accent-soft: rgba(42,120,214,0.10);
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --surface: #1a1a19;
-    --page: #0d0d0d;
-    --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --muted: #898781;
-    --gridline: #2c2c2a;
-    --border: rgba(255,255,255,0.10);
+    --bg: #0a0b0c;
+    --surface: #131517;
+    --surface-2: #1b1e21;
+    --text-primary: #f4f5f5;
+    --text-secondary: #a8adb3;
+    --muted: #6b7075;
+    --gridline: #24272b;
+    --border: rgba(255,255,255,0.08);
+    --accent: #3987e5;
+    --accent-soft: rgba(57,135,229,0.14);
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: var(--page);
+    background: var(--bg);
     color: var(--text-primary);
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    line-height: 1.4;
+    line-height: 1.45;
   }
-  .page { max-width: 900px; margin: 0 auto; padding: 32px 20px 64px; }
-  h1 { font-size: 1.4rem; margin: 0 0 4px; }
-  .meta { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 28px; }
-  .chart {
+  .page { max-width: 880px; margin: 0 auto; padding: 40px 20px 72px; }
+  .masthead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .wordmark { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); text-transform: uppercase; }
+  .meta { color: var(--muted); font-size: 0.8rem; }
+  .query-pill {
+    display: inline-block; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 10px 20px; font-size: 1rem; color: var(--text-secondary);
+    margin-bottom: 28px;
+  }
+  .hero {
+    background: linear-gradient(180deg, var(--accent-soft), transparent 60%), var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
+    border-radius: 16px;
+    padding: 28px 28px 22px;
+    margin-bottom: 20px;
+  }
+  .hero-kicker { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .hero-name { margin: 0 0 10px; font-size: 1.7rem; text-wrap: balance; }
+  .hero-name a { color: var(--text-primary); text-decoration: none; }
+  .hero-name a:hover { text-decoration: underline; }
+  .hero-rationale { color: var(--text-secondary); font-size: 0.98rem; max-width: 60ch; margin: 0 0 22px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--border); border-radius: 12px; overflow: hidden; }
+  .stat-tile { background: var(--surface-2); padding: 16px 14px; }
+  .stat-value { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-label { font-size: 0.76rem; color: var(--text-secondary); margin-top: 2px; }
+  .stat-sublabel { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
+  .methodology { font-size: 0.72rem; color: var(--muted); margin: 14px 2px 0; line-height: 1.5; }
+  .panel {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
-  .chart h3 { margin: 0 0 2px; font-size: 1rem; }
-  .chart-subtitle { color: var(--muted); font-size: 0.8rem; margin: 0 0 14px; }
+  .panel h3 { margin: 0 0 2px; font-size: 0.95rem; }
+  .panel-subtitle { color: var(--muted); font-size: 0.78rem; margin: 0 0 14px; }
+  .checklist-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--gridline); }
+  .checklist-row:last-child { border-bottom: none; }
+  .checklist-icon {
+    flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700;
+  }
+  .checklist-req { flex: 0 0 180px; font-size: 0.85rem; font-weight: 600; }
+  .checklist-evidence { flex: 1; font-size: 0.83rem; color: var(--text-secondary); }
+  .checklist-evidence em { color: var(--muted); font-style: normal; }
+  .section-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 32px 2px 12px; }
   .bar-row { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
   .bar-label {
     width: 34%; min-width: 120px; font-size: 0.82rem; color: var(--text-secondary);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .bar-track {
-    flex: 1; height: 20px; background: var(--gridline); border-radius: 4px;
-    overflow: hidden;
-  }
+  .bar-track { flex: 1; height: 18px; background: var(--gridline); border-radius: 4px; overflow: hidden; }
   .bar-fill { height: 100%; border-radius: 0 4px 4px 0; min-width: 3px; }
-  .bar-value {
-    width: 110px; text-align: right; font-size: 0.82rem; color: var(--text-secondary);
-    font-variant-numeric: tabular-nums;
-  }
+  .bar-value { width: 110px; text-align: right; font-size: 0.8rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
   .status-label { font-weight: 600; }
   .empty { color: var(--muted); font-size: 0.85rem; }
   .table-scroll { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.8rem; }
   th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--gridline); white-space: nowrap; }
-  th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.02em; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  a { color: var(--text-primary); }
-  .pill {
-    display: inline-block; padding: 2px 8px; border-radius: 999px;
-    color: #fff; font-size: 0.72rem; font-weight: 600; white-space: nowrap;
-  }
+  a { color: var(--accent); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; color: #fff; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
   .grid-table th { white-space: normal; }
+  footer { margin-top: 32px; color: var(--muted); font-size: 0.75rem; text-align: center; }
+  @media (max-width: 620px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .checklist-row { flex-direction: column; gap: 2px; }
+    .checklist-req { flex: none; }
+  }
 </style>
 </head>
 <body>
   <div class="page">
-    <h1>RepoBridge: habit tracker with streaks and social accountability</h1>
-    <p class="meta">4 candidates &middot; 2026-08-13T00:00:00Z &middot; generated by RepoBridge, no network calls at render time</p>
+    <div class="masthead">
+      <span class="wordmark">RepoBridge</span>
+      <span class="meta">4 candidates &middot; 2026-08-13T00:00:00Z &middot; no network calls at render time</span>
+    </div>
+    <div class="query-pill">habit tracker with streaks and social accountability</div>
     
-    <section class="chart">
+    <section class="hero">
+      <div class="hero-kicker">Best match</div>
+      <h2 class="hero-name"><a href="https://github.com/redpangilinan/iotawise">redpangilinan/iotawise</a></h2>
+      <p class="hero-rationale">Highest requirement coverage of the four candidates (70%): real streak tracking, a working dashboard, and Google auth already in place. Verified active with 3+ contributors, though it lacks CI and still needs social features and finished push notifications.</p>
+      <div class="stat-grid">
+        <div class="stat-tile">
+          <div class="stat-value">70%</div>
+          <div class="stat-label">Match</div>
+          
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value">2</div>
+          <div class="stat-label">Features left</div>
+          <div class="stat-sublabel">of 5 total</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value">1.8d</div>
+          <div class="stat-label">Est. time remaining</div>
+          <div class="stat-sublabel">~11h</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value">52.5K</div>
+          <div class="stat-label">Tokens saved</div>
+          <div class="stat-sublabel">~70% vs. building from scratch</div>
+        </div></div>
+      <p class="methodology">Estimate, not a measurement: 8h per missing feature, 3h per partial one; token savings assume ~15,000 tokens to generate one feature from scratch, at half that for a partial. Actual time and token cost depend heavily on your stack and the specific features.</p>
+    </section>
+    <section class="panel">
+      <h3>What redpangilinan/iotawise covers</h3>
+      
+        <div class="checklist-row">
+          <span class="checklist-icon" style="background:#0ca30c;">✓</span>
+          <span class="checklist-req">streak tracking</span>
+          <span class="checklist-evidence">&quot;Activity Streak Monitoring&quot; listed as a feature</span>
+        </div>
+        <div class="checklist-row">
+          <span class="checklist-icon" style="background:#898781;">–</span>
+          <span class="checklist-req">social accountability</span>
+          <span class="checklist-evidence">No mention anywhere in the README</span>
+        </div>
+        <div class="checklist-row">
+          <span class="checklist-icon" style="background:#fab219;">~</span>
+          <span class="checklist-req">reminders</span>
+          <span class="checklist-evidence">&quot;Web Push Notifications (coming soon)&quot; — not shipped yet</span>
+        </div>
+        <div class="checklist-row">
+          <span class="checklist-icon" style="background:#0ca30c;">✓</span>
+          <span class="checklist-req">progress visualization</span>
+          <span class="checklist-evidence">&quot;Dashboard Analytics&quot; feature</span>
+        </div>
+        <div class="checklist-row">
+          <span class="checklist-icon" style="background:#0ca30c;">✓</span>
+          <span class="checklist-req">multi-user</span>
+          <span class="checklist-evidence">&quot;Google Authentication&quot; implies per-user accounts</span>
+        </div>
+    </section>
+    <div class="section-label">Compared against</div>
+    
+    <section class="panel">
       <h3>Stars</h3>
-      <p class="chart-subtitle">Linear scale, capped to the highest-starred candidate shown.</p>
+      <p class="panel-subtitle">Linear scale, capped to the highest-starred candidate shown.</p>
       
         <div class="bar-row" title="redpangilinan/iotawise: 264">
           <div class="bar-label">redpangilinan/iotawise</div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:14.6%; background:#2a78d6;"></div>
+            <div class="bar-fill" style="width:14.6%; background:#3987e5;"></div>
           </div>
           <div class="bar-value">264</div>
         </div>
         <div class="bar-row" title="lehashree/eco-habit-tracker: 53">
           <div class="bar-label">lehashree/eco-habit-tracker</div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:2.9%; background:#2a78d6;"></div>
+            <div class="bar-fill" style="width:2.9%; background:#3987e5;"></div>
           </div>
           <div class="bar-value">53</div>
         </div>
         <div class="bar-row" title="MuffinTheDragon/daily-habit-tracker: 80">
           <div class="bar-label">MuffinTheDragon/daily-habit-tracker</div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:4.4%; background:#2a78d6;"></div>
+            <div class="bar-fill" style="width:4.4%; background:#3987e5;"></div>
           </div>
           <div class="bar-value">80</div>
         </div>
         <div class="bar-row" title="daya0576/beaverhabits: 1813">
           <div class="bar-label">daya0576/beaverhabits</div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:100.0%; background:#2a78d6;"></div>
+            <div class="bar-fill" style="width:100.0%; background:#3987e5;"></div>
           </div>
           <div class="bar-value">1813</div>
         </div>
     </section>
-    <section class="chart">
+    <section class="panel">
       <h3>Verified score</h3>
-      <p class="chart-subtitle">Recency + contributor count + CI presence, 0-100.</p>
+      <p class="panel-subtitle">Recency + contributor count + CI presence, 0-100.</p>
       
         <div class="bar-row" title="redpangilinan/iotawise: 66.7">
           <div class="bar-label">redpangilinan/iotawise</div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:66.7%; background:#2a78d6;"></div>
+            <div class="bar-fill" style="width:66.7%; background:#3987e5;"></div>
           </div>
           <div class="bar-value">66.7</div>
         </div>
         <div class="bar-row" title="lehashree/eco-habit-tracker: 33.3">
           <div class="bar-label">lehashree/eco-habit-tracker</div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:33.3%; background:#2a78d6;"></div>
+            <div class="bar-fill" style="width:33.3%; background:#3987e5;"></div>
           </div>
           <div class="bar-value">33.3</div>
         </div>
         <div class="bar-row" title="MuffinTheDragon/daily-habit-tracker: 33.3">
           <div class="bar-label">MuffinTheDragon/daily-habit-tracker</div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:33.3%; background:#2a78d6;"></div>
+            <div class="bar-fill" style="width:33.3%; background:#3987e5;"></div>
           </div>
           <div class="bar-value">33.3</div>
         </div>
         <div class="bar-row" title="daya0576/beaverhabits: 100.0">
           <div class="bar-label">daya0576/beaverhabits</div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:100.0%; background:#2a78d6;"></div>
+            <div class="bar-fill" style="width:100.0%; background:#3987e5;"></div>
           </div>
           <div class="bar-value">100.0</div>
         </div>
     </section>
-    <section class="chart">
+    <section class="panel">
       <h3>Deployability score</h3>
-      <p class="chart-subtitle">Docker/compose + .env.example + deploy button, 0-100.</p>
+      <p class="panel-subtitle">Docker/compose + .env.example + deploy button, 0-100.</p>
       
         <div class="bar-row" title="redpangilinan/iotawise: 33.3">
           <div class="bar-label">redpangilinan/iotawise</div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:33.3%; background:#2a78d6;"></div>
+            <div class="bar-fill" style="width:33.3%; background:#3987e5;"></div>
           </div>
           <div class="bar-value">33.3</div>
         </div>
         <div class="bar-row" title="lehashree/eco-habit-tracker: 0.0">
           <div class="bar-label">lehashree/eco-habit-tracker</div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:0.0%; background:#2a78d6;"></div>
+            <div class="bar-fill" style="width:0.0%; background:#3987e5;"></div>
           </div>
           <div class="bar-value">0.0</div>
         </div>
         <div class="bar-row" title="MuffinTheDragon/daily-habit-tracker: 0.0">
           <div class="bar-label">MuffinTheDragon/daily-habit-tracker</div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:0.0%; background:#2a78d6;"></div>
+            <div class="bar-fill" style="width:0.0%; background:#3987e5;"></div>
           </div>
           <div class="bar-value">0.0</div>
         </div>
         <div class="bar-row" title="daya0576/beaverhabits: 0.0">
           <div class="bar-label">daya0576/beaverhabits</div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:0.0%; background:#2a78d6;"></div>
+            <div class="bar-fill" style="width:0.0%; background:#3987e5;"></div>
           </div>
           <div class="bar-value">0.0</div>
         </div>
     </section>
-    <section class="chart">
-      <h3>Idea coverage</h3>
-      <p class="chart-subtitle">Present + half-credit Partial, as a share of stated requirements. Bucketed at &ge;70% strong / &ge;40% partial / below critical.</p>
+    <section class="panel">
+      <h3>Idea coverage, all candidates</h3>
+      <p class="panel-subtitle">Present + half-credit Partial, as a share of stated requirements.</p>
       
         <div class="bar-row" title="redpangilinan/iotawise: 70% coverage (Strong fit)">
           <div class="bar-label">redpangilinan/iotawise</div>
@@ -223,9 +338,9 @@
           <div class="bar-value status-label" style="color:#d03b3b;">20% &middot; Weak fit</div>
         </div>
     </section>
-    <section class="chart">
-      <h3>Feature-map grid</h3>
-      <p class="chart-subtitle">Hover a cell for the evidence quote behind it.</p>
+    <section class="panel">
+      <h3>Full feature-map grid</h3>
+      <p class="panel-subtitle">Hover a cell for the evidence quote behind it.</p>
       <div class="table-scroll">
         <table class="grid-table">
           <thead><tr><th></th><th>streak tracking</th><th>social accountability</th><th>reminders</th><th>progress visualization</th><th>multi-user</th></tr></thead>
@@ -233,7 +348,7 @@
         </table>
       </div>
     </section>
-    <section class="chart">
+    <section class="panel">
       <h3>All candidates</h3>
       <div class="table-scroll">
         <table class="data-table">
@@ -281,6 +396,7 @@
         </table>
       </div>
     </section>
+    <footer>Generated by RepoBridge from real GitHub data — see the matching .md report for full source citations.</footer>
   </div>
 </body>
 </html>
